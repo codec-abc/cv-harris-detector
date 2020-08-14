@@ -1,4 +1,4 @@
-use image::{DynamicImage, ImageBuffer, Luma, GrayImage}; // GenericImageView Rgba
+use image::{DynamicImage, GenericImageView, ImageBuffer, Luma, GrayImage}; // GenericImageView Rgba
 use imageproc::{gradients};
 
 // Run with cargo run --bin cv-harris-detector
@@ -13,34 +13,33 @@ use imageproc::{gradients};
 // https://github.com/codeplaysoftware/visioncpp/wiki/Example:-Harris-Corner-Detection
 
 pub fn main() {
+    let image_name = "./cv-harris-detector/test_images/Harris_Detector_Original_Image.jpg";
+    //let image_path = "./cv-harris-detector/test_images/fileListImageUnDist.jpg";
+
     let src_image = 
-        image::open("./cv-harris-detector/test_images/fileListImageUnDist.jpg")
+        image::open(image_name)
         .expect("failed to open image file");
 
     // Probably not the right kind of conversion
     // see https://docs.opencv.org/3.4/de/d25/imgproc_color_conversions.html#color_convert_rgb_gray
+    // and https://docs.rs/image/0.23.8/src/image/color.rs.html#415
 
-    let grey_image = src_image.to_luma();
+    let gray_image = src_image.to_luma();
 
     //let block_size : u32 = 2u32; // Neighborhood size (see the details on cornerEigenValsAndVecs() ).
     //let k_size : u32 = 3u32; // Aperture parameter for the Sobel() operator.
     let k : f64 = 0.04f64;  // Harris detector free parameter. See the formula below
 
-    let harris_result = harris_corner(&grey_image, k); // block_size, k_size,
+    let harris_result = harris_corner(&gray_image, k); // block_size, k_size,
 
-    let width = grey_image.width();
-    let height = grey_image.height();
+    let width = gray_image.width();
+    let height = gray_image.height();
 
     let mut img = GrayImage::new(width, height);
-    let thres = 400f64;
+    let thres = 100f64;
 
-    for x in 0..grey_image.width() - 1 {
-        for y in 0..grey_image.height() -1 {
-            //let value = sobel_vertical[(x, y)][0] as f64 / 1.0f64;
-            //let value = sobel_horizontal[(x, y)][0] as f64 / 1.0f64;
-            //let value = i_xy_image[(x, y)][0] as f64 / 4.0f64;
-            //let value = i_x2_image[(x, y)][0] as f64 / 4.0f64;
-            //let value = harris[(x, y)][0] as f64;
+    for x in 0..gray_image.width() - 1 {
+        for y in 0..gray_image.height() -1 {
             let harris_val_f64 = harris_result[(x, y)][0] as f64;
             let harris_val = harris_val_f64 as u8;
 
@@ -60,20 +59,19 @@ pub fn main() {
     
 }
 
-fn harris_corner(grey_image: &ImageBuffer<Luma<u8>, Vec<u8>>, k : f64) -> ImageBuffer<Luma<f64>, Vec<f64>> { //  block_size : u32, k_size : u32
+pub fn harris_corner(gray_image: &ImageBuffer<Luma<u8>, Vec<u8>>, k : f64) -> ImageBuffer<Luma<f64>, Vec<f64>> { //  block_size : u32, k_size : u32
+    let sobel_horizontal = gradients::horizontal_sobel(&gray_image);
+    let sobel_vertical = gradients::vertical_sobel(&gray_image);
 
-    let sobel_horizontal = gradients::horizontal_sobel(&grey_image);
-    let sobel_vertical = gradients::vertical_sobel(&grey_image);
-
-    let width = grey_image.width();
-    let height = grey_image.height();
+    let width = gray_image.width();
+    let height = gray_image.height();
 
     let mut i_x2_image : ImageBuffer<Luma<f64>, Vec<f64>> = ImageBuffer::new(width, height);
     let mut i_y2_image : ImageBuffer<Luma<f64>, Vec<f64>> = ImageBuffer::new(width, height);
     let mut i_xy_image : ImageBuffer<Luma<f64>, Vec<f64>> = ImageBuffer::new(width, height);
 
-    for x in 0..grey_image.width() - 1 {
-        for y in 0..grey_image.height() - 1 {
+    for x in 0..gray_image.width() - 1 {
+        for y in 0..gray_image.height() - 1 {
             let i_x = sobel_horizontal[(x, y)][0] as f64 / 255.0f64;
             let i_y = sobel_vertical[(x, y)][0] as f64 / 255.0f64;
             let i_x2 = i_x * i_x;
@@ -93,9 +91,8 @@ fn harris_corner(grey_image: &ImageBuffer<Luma<u8>, Vec<u8>>, k : f64) -> ImageB
 
     let mut harris : ImageBuffer<Luma<f64>, Vec<f64>> = ImageBuffer::new(width, height);
     
-
-    for x in 0..grey_image.width() - 1 {
-        for y in 0..grey_image.height() - 1 {
+    for x in 0..gray_image.width() - 1 {
+        for y in 0..gray_image.height() - 1 {
             let ksumpx2 = i_x2_sum[(x, y)][0] as f64;
             let ksumpy2 = i_y2_sum[(x, y)][0] as f64;
             let ksumpxy = i_xy_sum[(x, y)][0] as f64;
