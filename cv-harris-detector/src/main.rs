@@ -1,8 +1,7 @@
 use image::{DynamicImage, ImageBuffer, Luma, GrayImage}; // GenericImageView Rgba
-use imageproc::{drawing, gradients};
+use imageproc::{gradients};
 
 // Run with cargo run --bin cv-harris-detector
-
 
 // see 
 // http://www.cse.psu.edu/~rtc12/CSE486/lecture06.pdf
@@ -23,20 +22,45 @@ pub fn main() {
 
     let grey_image = src_image.to_luma();
 
-    let block_size : u32 = 2u32; // Neighborhood size (see the details on cornerEigenValsAndVecs() ).
-    let k_size : u32 = 3u32; // Aperture parameter for the Sobel() operator.
+    //let block_size : u32 = 2u32; // Neighborhood size (see the details on cornerEigenValsAndVecs() ).
+    //let k_size : u32 = 3u32; // Aperture parameter for the Sobel() operator.
     let k : f64 = 0.04f64;  // Harris detector free parameter. See the formula below
 
-    harris_corner(grey_image, k); // block_size, k_size,
+    let harris_result = harris_corner(&grey_image, k); // block_size, k_size,
+
+    let width = grey_image.width();
+    let height = grey_image.height();
+
+    let mut img = GrayImage::new(width, height);
+    let thres = 400f64;
+
+    for x in 0..grey_image.width() - 1 {
+        for y in 0..grey_image.height() -1 {
+            //let value = sobel_vertical[(x, y)][0] as f64 / 1.0f64;
+            //let value = sobel_horizontal[(x, y)][0] as f64 / 1.0f64;
+            //let value = i_xy_image[(x, y)][0] as f64 / 4.0f64;
+            //let value = i_x2_image[(x, y)][0] as f64 / 4.0f64;
+            //let value = harris[(x, y)][0] as f64;
+            let harris_val_f64 = harris_result[(x, y)][0] as f64;
+            let harris_val = harris_val_f64 as u8;
+
+            let value = 
+                if harris_val_f64 > thres {
+                    Luma::from([harris_val])
+                } else {
+                    Luma::from([0u8])
+                };
+
+            img.put_pixel(x, y, value);
+        }
+    }
+
+    let img = DynamicImage::ImageLuma8(img);
+    imgshow::imgshow(&img);
     
-    let mut canvas = drawing::Blend(src_image.to_luma());
-    
-    let out_img = DynamicImage::ImageLuma8(canvas.0);
-    imgshow::imgshow(&out_img);
 }
 
-#[allow(unused_variables)]
-fn harris_corner(grey_image: ImageBuffer<Luma<u8>, Vec<u8>>, k : f64) -> () { //  block_size : u32, k_size : u32
+fn harris_corner(grey_image: &ImageBuffer<Luma<u8>, Vec<u8>>, k : f64) -> ImageBuffer<Luma<f64>, Vec<f64>> { //  block_size : u32, k_size : u32
 
     let sobel_horizontal = gradients::horizontal_sobel(&grey_image);
     let sobel_vertical = gradients::vertical_sobel(&grey_image);
@@ -68,9 +92,7 @@ fn harris_corner(grey_image: ImageBuffer<Luma<u8>, Vec<u8>>, k : f64) -> () { //
     let i_xy_sum: ImageBuffer<Luma<f64>, Vec<f64>> = imageproc::filter::filter3x3(&i_xy_image, &kernel);
 
     let mut harris : ImageBuffer<Luma<f64>, Vec<f64>> = ImageBuffer::new(width, height);
-    let mut harris_thres : ImageBuffer<Luma<f64>, Vec<f64>> = ImageBuffer::new(width, height);
-
-    let thres = 400f64;
+    
 
     for x in 0..grey_image.width() - 1 {
         for y in 0..grey_image.height() - 1 {
@@ -91,32 +113,8 @@ fn harris_corner(grey_image: ImageBuffer<Luma<u8>, Vec<u8>>, k : f64) -> () { //
             let harris_val = det - ktrace2;
 
             harris[(x, y)] = Luma::from([harris_val]);
-
-            if harris_val > thres {
-                harris_thres[(x, y)] = Luma::from([harris_val]);
-                println!("here");
-            } else {
-                harris_thres[(x, y)] = Luma::from([0.0f64]);
-            }
-            
         }
     }
 
-    let mut img = GrayImage::new(width, height);
-
-    for x in 0..grey_image.width() - 1 {
-        for y in 0..grey_image.height() -1 {
-            //let value = sobel_vertical[(x, y)][0] as f64 / 1.0f64;
-            //let value = sobel_horizontal[(x, y)][0] as f64 / 1.0f64;
-            //let value = i_xy_image[(x, y)][0] as f64 / 4.0f64;
-            //let value = i_x2_image[(x, y)][0] as f64 / 4.0f64;
-            //let value = harris[(x, y)][0] as f64;
-            let value = harris_thres[(x, y)][0] as f64;
-            img.put_pixel(x, y, Luma([value as u8]));
-        }
-    }
-
-    let img = DynamicImage::ImageLuma8(img);
-    imgshow::imgshow(&img);
-
+    harris
 }
