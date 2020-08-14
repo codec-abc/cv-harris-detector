@@ -1,5 +1,5 @@
-use image::{DynamicImage, GrayImage, ImageBuffer, Luma};
-use imageproc::{filter, gradients};
+use image::{DynamicImage, GrayImage, ImageBuffer, Luma, Rgba};
+use imageproc::{filter, gradients, drawing};
 
 // Run with cargo run --bin cv-harris-detector
 
@@ -34,27 +34,40 @@ pub fn main() {
     let blur = Some(0.5f32); // TODO: fix this. For very low value the image starts to be completely white
 
     let harris_result = harris_corner(&gray_image, k, blur); // block_size, k_size,
+    let threshold = 5f64;
 
-    let mut img = GrayImage::new(width, height);
-    let threshold = 0f64;
+    // let mut img = GrayImage::new(width, height);
+    // for x in 0..width - 1 {
+    //     for y in 0..height - 1 {
+    //         let harris_val_f64 = harris_result[(x, y)][0];
+    //         let harris_val = (harris_val_f64 * 1.0f64) as u8;
+
+    //         let value = if harris_val_f64 > threshold {
+    //             Luma::from([harris_val])
+    //         } else {
+    //             Luma::from([0u8])
+    //         };
+
+    //         img.put_pixel(x, y, value);
+    //     }
+    // }
+    // let img = DynamicImage::ImageLuma8(img);
+    // imgshow::imgshow(&img);
+
+    let mut canvas = drawing::Blend(src_image.to_rgba());
 
     for x in 0..width - 1 {
         for y in 0..height - 1 {
             let harris_val_f64 = harris_result[(x, y)][0];
-            let harris_val = (harris_val_f64 * 3.0f64) as u8;
-
-            let value = if harris_val_f64 > threshold {
-                Luma::from([harris_val])
-            } else {
-                Luma::from([0u8])
-            };
-
-            img.put_pixel(x, y, value);
+            if harris_val_f64 > threshold {
+                drawing::draw_cross_mut(&mut canvas, Rgba([0, 255, 255, 128]), x as i32, y as i32);
+            }
+            
         }
     }
 
-    let img = DynamicImage::ImageLuma8(img);
-    imgshow::imgshow(&img);
+    let out_img = DynamicImage::ImageRgba8(canvas.0);
+    imgshow::imgshow(&out_img);
 }
 
 pub fn harris_corner(
@@ -101,8 +114,10 @@ pub fn harris_corner(
     ];
     let i_x2_sum: ImageBuffer<Luma<f64>, Vec<f64>> =
         imageproc::filter::filter3x3(&i_x2_image, &kernel);
+
     let i_y2_sum: ImageBuffer<Luma<f64>, Vec<f64>> =
         imageproc::filter::filter3x3(&i_y2_image, &kernel);
+        
     let i_xy_sum: ImageBuffer<Luma<f64>, Vec<f64>> =
         imageproc::filter::filter3x3(&i_xy_image, &kernel);
 
