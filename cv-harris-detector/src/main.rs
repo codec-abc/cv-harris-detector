@@ -1,9 +1,9 @@
-use image::{DynamicImage, ImageBuffer, Luma, GrayImage};
-use imageproc::{gradients, filter};
+use image::{DynamicImage, GrayImage, ImageBuffer, Luma};
+use imageproc::{filter, gradients};
 
 // Run with cargo run --bin cv-harris-detector
 
-// see 
+// see
 // http://www.cse.psu.edu/~rtc12/CSE486/lecture06.pdf
 // https://medium.com/data-breach/introduction-to-harris-corner-detector-32a88850b3f6
 // https://en.wikipedia.org/wiki/Harris_Corner_Detector
@@ -16,9 +16,7 @@ pub fn main() {
     let image_path = "./cv-harris-detector/test_images/Harris_Detector_Original_Image.jpg";
     //let image_path = "./cv-harris-detector/test_images/fileListImageUnDist.jpg";
 
-    let src_image = 
-        image::open(image_path)
-        .expect("failed to open image file");
+    let src_image = image::open(image_path).expect("failed to open image file");
 
     // Probably not the right kind of conversion
     // see https://docs.opencv.org/3.4/de/d25/imgproc_color_conversions.html#color_convert_rgb_gray
@@ -32,7 +30,7 @@ pub fn main() {
     //let block_size : u32 = 2u32; // Neighborhood size (see the details on cornerEigenValsAndVecs() ).
     //let k_size : u32 = 3u32; // Aperture parameter for the Sobel() operator.
 
-    let k : f64 = 0.1f64;  // Harris detector free parameter. The higher the value the less it detects.
+    let k: f64 = 0.1f64; // Harris detector free parameter. The higher the value the less it detects.
     let blur = Some(0.5f32); // TODO: fix this. For very low value the image starts to be completely white
 
     let harris_result = harris_corner(&gray_image, k, blur); // block_size, k_size,
@@ -41,16 +39,15 @@ pub fn main() {
     let threshold = 0f64;
 
     for x in 0..width - 1 {
-        for y in 0..height -1 {
+        for y in 0..height - 1 {
             let harris_val_f64 = harris_result[(x, y)][0];
             let harris_val = (harris_val_f64 * 3.0f64) as u8;
 
-            let value = 
-                if harris_val_f64 > threshold {
-                    Luma::from([harris_val])
-                } else {
-                    Luma::from([0u8])
-                };
+            let value = if harris_val_f64 > threshold {
+                Luma::from([harris_val])
+            } else {
+                Luma::from([0u8])
+            };
 
             img.put_pixel(x, y, value);
         }
@@ -58,26 +55,22 @@ pub fn main() {
 
     let img = DynamicImage::ImageLuma8(img);
     imgshow::imgshow(&img);
-    
 }
 
 pub fn harris_corner(
-    gray_image: &ImageBuffer<Luma<u8>, Vec<u8>>, 
-    k : f64,
-    blur: Option<f32>
-) // TODO:  block_size : u32, k_size : u32
-    -> ImageBuffer<Luma<f64>, Vec<f64>> 
-{ 
+    gray_image: &ImageBuffer<Luma<u8>, Vec<u8>>,
+    k: f64,
+    blur: Option<f32>,
+) -> ImageBuffer<Luma<f64>, Vec<f64>> {
     let blurred_image: Option<ImageBuffer<Luma<u8>, Vec<u8>>>;
 
-    let gray_image: &ImageBuffer<Luma<u8>, Vec<u8>> = 
-        match blur {
-            Some(f) =>  {
-                blurred_image = Some(filter::gaussian_blur_f32(&gray_image, f));
-                blurred_image.as_ref().unwrap()
-            }
-            None => gray_image
-        };
+    let gray_image: &ImageBuffer<Luma<u8>, Vec<u8>> = match blur {
+        Some(f) => {
+            blurred_image = Some(filter::gaussian_blur_f32(&gray_image, f));
+            blurred_image.as_ref().unwrap()
+        }
+        None => gray_image,
+    };
 
     let sobel_horizontal = gradients::horizontal_sobel(&gray_image);
     let sobel_vertical = gradients::vertical_sobel(&gray_image);
@@ -85,9 +78,9 @@ pub fn harris_corner(
     let width = gray_image.width();
     let height = gray_image.height();
 
-    let mut i_x2_image : ImageBuffer<Luma<f64>, Vec<f64>> = ImageBuffer::new(width, height);
-    let mut i_y2_image : ImageBuffer<Luma<f64>, Vec<f64>> = ImageBuffer::new(width, height);
-    let mut i_xy_image : ImageBuffer<Luma<f64>, Vec<f64>> = ImageBuffer::new(width, height);
+    let mut i_x2_image: ImageBuffer<Luma<f64>, Vec<f64>> = ImageBuffer::new(width, height);
+    let mut i_y2_image: ImageBuffer<Luma<f64>, Vec<f64>> = ImageBuffer::new(width, height);
+    let mut i_xy_image: ImageBuffer<Luma<f64>, Vec<f64>> = ImageBuffer::new(width, height);
 
     for x in 0..width - 1 {
         for y in 0..height - 1 {
@@ -103,13 +96,18 @@ pub fn harris_corner(
         }
     }
 
-    let kernel : Vec<f64> = vec![1.0f64, 1.0f64, 1.0f64, 1.0f64, 1.0f64, 1.0f64, 1.0f64, 1.0f64, 1.0f64];
-    let i_x2_sum: ImageBuffer<Luma<f64>, Vec<f64>> = imageproc::filter::filter3x3(&i_x2_image, &kernel);
-    let i_y2_sum: ImageBuffer<Luma<f64>, Vec<f64>> = imageproc::filter::filter3x3(&i_y2_image, &kernel);
-    let i_xy_sum: ImageBuffer<Luma<f64>, Vec<f64>> = imageproc::filter::filter3x3(&i_xy_image, &kernel);
+    let kernel: Vec<f64> = vec![
+        1.0f64, 1.0f64, 1.0f64, 1.0f64, 1.0f64, 1.0f64, 1.0f64, 1.0f64, 1.0f64,
+    ];
+    let i_x2_sum: ImageBuffer<Luma<f64>, Vec<f64>> =
+        imageproc::filter::filter3x3(&i_x2_image, &kernel);
+    let i_y2_sum: ImageBuffer<Luma<f64>, Vec<f64>> =
+        imageproc::filter::filter3x3(&i_y2_image, &kernel);
+    let i_xy_sum: ImageBuffer<Luma<f64>, Vec<f64>> =
+        imageproc::filter::filter3x3(&i_xy_image, &kernel);
 
-    let mut harris : ImageBuffer<Luma<f64>, Vec<f64>> = ImageBuffer::new(width, height);
-    
+    let mut harris: ImageBuffer<Luma<f64>, Vec<f64>> = ImageBuffer::new(width, height);
+
     for x in 0..width - 1 {
         for y in 0..height - 1 {
             let ksumpx2 = i_x2_sum[(x, y)][0] as f64;
