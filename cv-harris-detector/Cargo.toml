@@ -1,0 +1,13 @@
+[package]
+name = "cv-harris-detector"
+version = "0.1.0"
+authors = ["Geordon Worley <vadixidav@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+cv-core = { version = "0.15.0", path = "../cv-core" }
+nalgebra = { version = "0.21.1", features = ["alloc"], default-features = false }
+num-traits = "0.2.12"
+image = "0.23.7"
+imageproc = "0.21.0"
+imgshow = { version = "0.1.0", path = "../imgshow"}
