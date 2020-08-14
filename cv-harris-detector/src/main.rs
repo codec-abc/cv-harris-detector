@@ -33,7 +33,7 @@ pub fn main() {
     //let k_size : u32 = 3u32; // Aperture parameter for the Sobel() operator.
 
     let k : f64 = 0.1f64;  // Harris detector free parameter. The higher the value the less it detects.
-    let blur = Some(1f32); // TODO: fix this. For very low value the image starts to be completely white
+    let blur = Some(0.5f32); // TODO: fix this. For very low value the image starts to be completely white
 
     let harris_result = harris_corner(&gray_image, k, blur); // block_size, k_size,
 
@@ -68,7 +68,7 @@ pub fn harris_corner(
 ) // TODO:  block_size : u32, k_size : u32
     -> ImageBuffer<Luma<f64>, Vec<f64>> 
 { 
-    let mut blurred_image: Option<ImageBuffer<Luma<u8>, Vec<u8>>> = None;
+    let blurred_image: Option<ImageBuffer<Luma<u8>, Vec<u8>>>;
 
     let gray_image: &ImageBuffer<Luma<u8>, Vec<u8>> = 
         match blur {
