@@ -283,7 +283,7 @@ fn compute_neighbor_distance_histogram(corners: &[CornerLocation]) -> HashMap<u3
         let self_x_f64 = self_x as f64;
         let self_y_f64 = self_y as f64;
 
-        for index_2 in index_1..corners.len() {
+        for index_2 in (index_1 + 1)..corners.len() {
 
             // Don't make sense to check if pixel with itself
             if index_1 == index_2 {
