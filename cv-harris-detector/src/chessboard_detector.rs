@@ -215,16 +215,17 @@ fn norm((a_x, a_y) : (f64, f64)) -> f64 {
 // return the index of the corners
 fn get_corners(corners: &[CornerLocation]) 
 -> (usize, usize, usize, usize) {
-    let mut a = std::i64::MAX;
-    let mut b = std::i64::MIN;
-    let mut c = std::i64::MAX;
-    let mut d = std::i64::MIN;
+    let mut a = std::i64::MAX; // top-left corner
+    let mut b = std::i64::MIN; // top-right corner
+    let mut c = std::i64::MAX; // bottom-left corner
+    let mut d = std::i64::MIN; // bottom-right corner
 
     let mut a_index = 0;
     let mut b_index = 0;
     let mut c_index = 0;
     let mut d_index = 0;
 
+    // for all corners we sum and compute the diff between x and y.
     for index in 0..corners.len() {
         let (current_x, current_y) = corners[index];
 
