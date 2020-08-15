@@ -186,3 +186,48 @@ fn distance((a_x, a_y) : (f64, f64), (b_x, b_y) : (f64, f64)) -> f64 {
 fn norm((a_x, a_y) : (f64, f64)) -> f64 {
     (a_x.powi(2) + a_y.powi(2)).sqrt()
 }
+
+// return the index of the corners
+fn get_corners(corners: &[CornerLocation]) 
+-> (usize, usize, usize, usize) {
+    let mut a = std::i64::MAX;
+    let mut b = std::i64::MIN;
+    let mut c = std::i64::MAX;
+    let mut d = std::i64::MIN;
+
+    let mut a_index = 0;
+    let mut b_index = 0;
+    let mut c_index = 0;
+    let mut d_index = 0;
+
+    for index in 0..corners.len() {
+        let (current_x, current_y) = corners[index];
+
+        let sum = current_x as i64 + current_y as i64 ;
+        let diff = current_x as i64 - current_y as i64 ;
+
+
+        if sum < a {
+            a = sum;
+            a_index = index;
+        }
+
+        if diff > b {
+            b = sum;
+            b_index = index;
+        }
+
+        if diff < c {
+            c = sum;
+            c_index = index;
+        }
+
+        if sum > d {
+            d = sum;
+            d_index = index;
+        }
+
+    }
+
+    (a_index, b_index, c_index, d_index)
+}
