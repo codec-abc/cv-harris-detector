@@ -12,6 +12,12 @@ use imageproc::{filter, gradients, drawing};
 // https://github.com/opencv/opencv/blob/11b020b9f9e111bddd40bffe3b1759aa02d966f0/modules/imgproc/src/corner.cpp
 // https://github.com/codeplaysoftware/visioncpp/wiki/Example:-Harris-Corner-Detection
 
+pub struct HarrisDetectorResult {
+    pub detector_result: ImageBuffer<Luma<f64>, Vec<f64>>,
+    pub min: f64,
+    pub max: f64,
+}
+
 pub fn main() {
     let image_path = "./cv-harris-detector/test_images/Harris_Detector_Original_Image.jpg";
     //let image_path = "./cv-harris-detector/test_images/fileListImageUnDist.jpg";
@@ -26,22 +32,28 @@ pub fn main() {
     let width = gray_image.width();
     let height = gray_image.height();
 
-    // TODO:
-    //let block_size : u32 = 2u32; // Neighborhood size (see the details on cornerEigenValsAndVecs() ).
-    //let k_size : u32 = 3u32; // Aperture parameter for the Sobel() operator.
-
-    let k: f64 = 0.1f64; // Harris detector free parameter. The higher the value the less it detects.
+    let k: f64 = 0.04f64; // Harris detector free parameter. The higher the value the less it detects.
     let blur = None;//Some(0.5f32); // TODO: fix this. For very low value the image starts to be completely white
 
-    let harris_result = harris_corner(&gray_image, k, blur); // block_size, k_size,
-    let threshold = 50f64;
+    let harris_result = harris_corner(&gray_image, k, blur);
+    let min = harris_result.min;
+    let max = harris_result.max;
+
+    let threshold = 200f64;
 
     let mut canvas = drawing::Blend(src_image.to_rgba());
 
     for x in 0..width {
         for y in 0..height {
-            let harris_val_f64 = harris_result[(x, y)][0];
-            if harris_val_f64 > threshold {
+            let harris_val_f64 = harris_result.detector_result[(x, y)][0];
+
+            // min max normlization
+            let a = 0.0f64;
+            let b = 255.0f64;
+
+            let normed = a + ((harris_val_f64 - min) * (b - a)) / (max - min);
+
+            if normed > threshold {
                 drawing::draw_cross_mut(&mut canvas, Rgba([0, 255, 255, 128]), x as i32, y as i32);
             }
             
@@ -56,7 +68,7 @@ pub fn harris_corner(
     gray_image: &ImageBuffer<Luma<u8>, Vec<u8>>,
     k: f64,
     blur: Option<f32>,
-) -> ImageBuffer<Luma<f64>, Vec<f64>> {
+) -> HarrisDetectorResult {
     let blurred_image: Option<ImageBuffer<Luma<u8>, Vec<u8>>>;
 
     let gray_image: &ImageBuffer<Luma<u8>, Vec<u8>> = match blur {
@@ -94,6 +106,7 @@ pub fn harris_corner(
     let kernel: Vec<f64> = vec![
         1.0f64, 1.0f64, 1.0f64, 1.0f64, 1.0f64, 1.0f64, 1.0f64, 1.0f64, 1.0f64,
     ];
+
     let i_x2_sum: ImageBuffer<Luma<f64>, Vec<f64>> =
         imageproc::filter::filter3x3(&i_x2_image, &kernel);
 
@@ -104,6 +117,9 @@ pub fn harris_corner(
         imageproc::filter::filter3x3(&i_xy_image, &kernel);
 
     let mut harris: ImageBuffer<Luma<f64>, Vec<f64>> = ImageBuffer::new(width, height);
+
+    let mut harris_min = std::f64::MAX;
+    let mut harris_max = std::f64::MIN;
 
     for x in 0..width {
         for y in 0..height {
@@ -122,9 +138,17 @@ pub fn harris_corner(
 
             let harris_val = det - ktrace2;
 
+            harris_min = if harris_val < harris_min { harris_val } else { harris_min };
+            harris_max = if harris_val > harris_max { harris_val } else { harris_max };
+
             harris[(x, y)] = Luma::from([harris_val]);
         }
     }
 
-    harris
+    HarrisDetectorResult {
+        detector_result: harris,
+        min: harris_min,
+        max: harris_max,
+    }
+    
 }
