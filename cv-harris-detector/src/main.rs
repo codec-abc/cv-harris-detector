@@ -31,10 +31,10 @@ pub fn main() {
     //let k_size : u32 = 3u32; // Aperture parameter for the Sobel() operator.
 
     let k: f64 = 0.1f64; // Harris detector free parameter. The higher the value the less it detects.
-    let blur = Some(0.5f32); // TODO: fix this. For very low value the image starts to be completely white
+    let blur = None;//Some(0.5f32); // TODO: fix this. For very low value the image starts to be completely white
 
     let harris_result = harris_corner(&gray_image, k, blur); // block_size, k_size,
-    let threshold = 5f64;
+    let threshold = 50f64;
 
     // let mut img = GrayImage::new(width, height);
     // for x in 0..width - 1 {
@@ -56,8 +56,8 @@ pub fn main() {
 
     let mut canvas = drawing::Blend(src_image.to_rgba());
 
-    for x in 0..width - 1 {
-        for y in 0..height - 1 {
+    for x in 0..width {
+        for y in 0..height {
             let harris_val_f64 = harris_result[(x, y)][0];
             if harris_val_f64 > threshold {
                 drawing::draw_cross_mut(&mut canvas, Rgba([0, 255, 255, 128]), x as i32, y as i32);
@@ -95,8 +95,8 @@ pub fn harris_corner(
     let mut i_y2_image: ImageBuffer<Luma<f64>, Vec<f64>> = ImageBuffer::new(width, height);
     let mut i_xy_image: ImageBuffer<Luma<f64>, Vec<f64>> = ImageBuffer::new(width, height);
 
-    for x in 0..width - 1 {
-        for y in 0..height - 1 {
+    for x in 0..width {
+        for y in 0..height {
             let i_x = sobel_horizontal[(x, y)][0] as f64 / 255.0f64;
             let i_y = sobel_vertical[(x, y)][0] as f64 / 255.0f64;
             let i_x2 = i_x * i_x;
@@ -123,8 +123,8 @@ pub fn harris_corner(
 
     let mut harris: ImageBuffer<Luma<f64>, Vec<f64>> = ImageBuffer::new(width, height);
 
-    for x in 0..width - 1 {
-        for y in 0..height - 1 {
+    for x in 0..width {
+        for y in 0..height {
             let ksumpx2 = i_x2_sum[(x, y)][0] as f64;
             let ksumpy2 = i_y2_sum[(x, y)][0] as f64;
             let ksumpxy = i_xy_sum[(x, y)][0] as f64;
