@@ -275,8 +275,15 @@ fn compute_adaptive_parameters(a_min: f64, a_max: f64) -> chessboard_detector_pa
     chessboard_detector_parameters { r, p, d, t}
 }
 
-fn compute_neighbor_distance_histogram(corners: &[CornerLocation]) -> HashMap<u32, u32> {
+struct DistanceHistogram {
+    histogram: HashMap::<u32, u32>,
+    number_of_values: u32,
+    peak_index: u32,
+}
+
+fn compute_neighbor_distance_histogram(corners: &[CornerLocation]) -> DistanceHistogram {
     let mut histogram = HashMap::<u32, u32>::new();
+    let mut sum = 0;
 
     for index_1 in 0..corners.len() {
         let (self_x, self_y) = corners[index_1];
@@ -298,10 +305,25 @@ fn compute_neighbor_distance_histogram(corners: &[CornerLocation]) -> HashMap<u3
             let distance = distance((self_x_f64, self_y_f64), (other_x_f64, other_y_f64));
             let distance = distance as u32;
 
+            sum += 1;
             *histogram.entry(distance).or_insert(0) += 1;
 
         }
     }
 
-    histogram
+    let mut peak_index = 0;
+    let mut peak_max_value = 0;
+
+    for (key, value) in &histogram {
+        if *value >= peak_max_value {
+            peak_index = *key;
+            peak_max_value = *value;
+        }
+    }
+
+    DistanceHistogram {
+        histogram: histogram,
+        number_of_values: sum,
+        peak_index: peak_index,
+    }
 }
