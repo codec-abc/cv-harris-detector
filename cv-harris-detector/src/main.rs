@@ -3,9 +3,10 @@ use imageproc::{drawing};
 
 // Run with cargo run --bin cv-harris-detector
 
-pub fn main() {
-    let image_path = "./cv-harris-detector/test_images/Harris_Detector_Original_Image.jpg";
+pub fn main_harris() {
+    //let image_path = "./cv-harris-detector/test_images/Harris_Detector_Original_Image.jpg";
     //let image_path = "./cv-harris-detector/test_images/fileListImageUnDist.jpg";
+    let image_path = "./cv-harris-detector/test_images/Calibim1.tif";
 
     let src_image = image::open(image_path).expect("failed to open image file");
 
@@ -25,7 +26,7 @@ pub fn main() {
     let harris_normed = cv_harris_detector::min_max_normalize_harris(&harris_result);
 
     let display_over_original_image = false;
-    let threshold = 150;
+    let threshold = 120;
 
     let mut canvas = if display_over_original_image {
         drawing::Blend(src_image.to_rgba())
@@ -48,4 +49,24 @@ pub fn main() {
     imgshow::imgshow(&out_img);
 }
 
+pub fn main_chessboard_detector() {
+    let image_path = "./cv-harris-detector/test_images/Calibim1.tif";
+    //let image_path = "./cv-harris-detector/test_images/fileListImageUnDist.jpg";
 
+    let src_image = image::open(image_path).expect("failed to open image file");
+
+    let gray_image = src_image.to_luma();
+    let width = gray_image.width();
+    let height = gray_image.height();
+
+    let mut canvas = drawing::Blend(src_image.to_rgba());
+
+
+    let out_img = DynamicImage::ImageRgba8(canvas.0);
+    imgshow::imgshow(&out_img);
+}
+
+
+pub fn main() {
+    main_harris();
+}
