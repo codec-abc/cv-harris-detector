@@ -2,7 +2,7 @@
 // https://res.mdpi.com/d_attachment/sensors/sensors-10-02027/article_deploy/sensors-10-02027.pdf
 //http://ir.hfcas.ac.cn:8080/bitstream/334002/31604/1/Automatic%20chessboard%20corner%20detection%20method.pdf
 
-use image::{ImageBuffer, Luma, Rgba};
+use image::{ImageBuffer, Luma};
 
 type GreyImage = ImageBuffer<Luma<u8>, Vec<u8>>;
 type CornerLocation = (i32, i32);
@@ -104,7 +104,8 @@ pub fn apply_neighbor_distance_filter(
         let other_x_f64 = other_x as f64;
         let other_y_f64 = other_y as f64;
 
-        let distance = ((self_x_f64 - other_x_f64).powi(2) + (self_y_f64 - other_y_f64).powi(2)).sqrt();
+        let distance = distance((self_x_f64, self_y_f64), (other_x_f64, other_y_f64));
+        //((self_x_f64 - other_x_f64).powi(2) + (self_y_f64 - other_y_f64).powi(2)).sqrt();
 
         if distance <= distance_threshold {
             neighbor_count = neighbor_count + 1;
@@ -118,8 +119,70 @@ pub fn apply_neighbor_distance_filter(
     }
 }
 
-pub fn apply_neighbor_angle_filter() {
-    todo!();
+pub fn apply_neighbor_angle_filter(
+    t_cosine_threshold: f64,
+    corners: &[CornerLocation],
+    corner_index_to_check: usize
+) -> CornerFilterResult 
+{
+    // see Section 3.2.3 Angle property:
 
-    // see Section 3.5 in Automatic chessboard corner detection method
+    let (self_x, self_y) = corners[corner_index_to_check];
+    let self_x_f64 = self_x as f64;
+    let self_y_f64 = self_y as f64;
+
+    // We store distance to a neighbor along with the neighbor's coordinates
+    let mut closer_neighbor_1 = (std::f64::MAX, (0f64, 0f64));
+    let mut closer_neighbor_2 = (std::f64::MAX, (0f64, 0f64));
+
+    for index in 0..corners.len() {
+
+        // Don't make sense to check if pixel is close with itself
+        if index == corner_index_to_check {
+            continue;
+        }
+
+        let (other_x, other_y) = corners[index];
+
+        let other_x_f64 = other_x as f64;
+        let other_y_f64 = other_y as f64;
+
+        //let distance = ((self_x_f64 - other_x_f64).powi(2) + (self_y_f64 - other_y_f64).powi(2)).sqrt();
+        let distance = distance((self_x_f64, self_y_f64), (other_x_f64, other_y_f64));
+
+        let mut current_neighbor = (distance, (other_x_f64, other_y_f64));
+
+        if current_neighbor.0 < closer_neighbor_1.0 {
+            std::mem::swap(&mut current_neighbor, &mut closer_neighbor_1);
+        }
+
+        if current_neighbor.0 < closer_neighbor_2.0 {
+            std::mem::swap(&mut current_neighbor, &mut closer_neighbor_2);
+        }
+    }
+
+    // now calculates angles with the 2 closest neighbors.
+    // ie, closer_neighbor_1 -> current_point -> closer_neighbor_2
+
+    let (closer_neighbor_1_x, closer_neighbor_1_y) = closer_neighbor_1.1;
+    let (closer_neighbor_2_x, closer_neighbor_2_y) = closer_neighbor_2.1;
+
+    let a = ((self_x_f64  - closer_neighbor_1_x), (self_y_f64 - closer_neighbor_1_y));
+    let b = ((self_x_f64  - closer_neighbor_2_x), (self_y_f64 - closer_neighbor_2_y));
+
+    let cos_theta = (a.0 * b.0 + a.1 * b.1) / (norm(a) * norm(b));
+
+    if cos_theta < t_cosine_threshold {
+        CornerFilterResult::RealCorner
+    } else {
+        CornerFilterResult::FakeCorner
+    }
+}
+
+fn distance((a_x, a_y) : (f64, f64), (b_x, b_y) : (f64, f64)) -> f64 {
+    ((a_x - b_x).powi(2) + (a_y - b_y).powi(2)).sqrt()
+}
+
+fn norm((a_x, a_y) : (f64, f64)) -> f64 {
+    (a_x.powi(2) + a_y.powi(2)).sqrt()
 }

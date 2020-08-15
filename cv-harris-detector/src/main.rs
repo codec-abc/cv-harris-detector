@@ -22,8 +22,7 @@ pub fn main_harris() {
     let blur = Some(0.3f32); // TODO: fix this. For very low value the image starts to be completely white
 
     let harris_result = cv_harris_detector::harris_corner(&gray_image, k, blur);
-
-    let harris_normed = cv_harris_detector::min_max_normalize_harris(&harris_result);
+    let harris_normed = harris_result.min_max_normalized_harris();
 
     let display_over_original_image = false;
     let threshold = 150;
@@ -62,11 +61,11 @@ pub fn main_chessboard_detector() {
     let f = 0.5f32;
     let blurred_image = imageproc::filter::gaussian_blur_f32(&src_image.to_rgb(), f);
 
-    let gray_image = src_image.to_luma();
-    let width = gray_image.width();
-    let height = gray_image.height();
+    // let gray_image = src_image.to_luma();
+    // let width = gray_image.width();
+    // let height = gray_image.height();
 
-    let mut canvas = drawing::Blend(blurred_image);
+    let canvas = drawing::Blend(blurred_image);
 
 
     let out_img = DynamicImage::ImageRgb8(canvas.0);

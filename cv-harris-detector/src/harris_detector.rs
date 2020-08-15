@@ -11,11 +11,45 @@ use imageproc::{filter, gradients};
 // https://github.com/codeplaysoftware/visioncpp/wiki/Example:-Harris-Corner-Detection
 
 pub struct HarrisDetectorResult {
-    pub detector_result: ImageBuffer<Luma<f64>, Vec<f64>>,
-    pub min: f64,
-    pub max: f64,
-    width: u32,
-    height: u32,
+    detector_result: ImageBuffer<Luma<f64>, Vec<f64>>,
+    min: f64, // minimum value computed by the Harris detector
+    max: f64, // maximum value computed by the Harris detector
+    width: u32, // image width
+    height: u32, // image height
+}
+
+impl HarrisDetectorResult {
+    pub fn get_image(&self) -> ImageBuffer<Luma<f64>, Vec<f64>> {
+        self.detector_result.clone()
+    }
+
+    pub fn min_max_normalized_harris(&self) -> ImageBuffer<Rgba<u8>, Vec<u8>> { //harris_result: &HarrisDetectorResult
+    
+        let width = self.width;
+        let height = self.height;
+    
+        let mut harris_normalized: ImageBuffer<Rgba<u8>, Vec<u8>> = ImageBuffer::new(width, height);
+    
+        let min = self.min;
+        let max = self.max;
+    
+        for x in 0..width {
+            for y in 0..height {
+                let harris_val_f64 = self.detector_result[(x, y)][0];
+    
+                // min max normalization
+                let a = 0.0f64;
+                let b = 255.0f64;
+    
+                let normed = a + ((harris_val_f64 - min) * (b - a)) / (max - min);
+                let normed_u8 = normed as u8;
+                harris_normalized[(x, y)] = Rgba([normed_u8, normed_u8, normed_u8, 255]);
+                
+            }
+        }
+    
+        harris_normalized
+    }
 }
 
 pub fn harris_corner(
@@ -25,6 +59,8 @@ pub fn harris_corner(
 ) -> HarrisDetectorResult {
     let blurred_image: Option<ImageBuffer<Luma<u8>, Vec<u8>>>;
 
+    // TODO : fix blur, it doesn't work great
+    // may use http://dev.theomader.com/gaussian-kernel-calculator/
     let gray_image: &ImageBuffer<Luma<u8>, Vec<u8>> = match blur {
         Some(f) => {
             blurred_image = Some(filter::gaussian_blur_f32(&gray_image, f));
@@ -109,32 +145,3 @@ pub fn harris_corner(
     
 }
 
-pub fn min_max_normalize_harris(
-    harris_result: &HarrisDetectorResult
-) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
-
-    let width = harris_result.width;
-    let height = harris_result.height;
-
-    let mut harris_normalized: ImageBuffer<Rgba<u8>, Vec<u8>> = ImageBuffer::new(width, height);
-
-    let min = harris_result.min;
-    let max = harris_result.max;
-
-    for x in 0..width {
-        for y in 0..height {
-            let harris_val_f64 = harris_result.detector_result[(x, y)][0];
-
-            // min max normalization
-            let a = 0.0f64;
-            let b = 255.0f64;
-
-            let normed = a + ((harris_val_f64 - min) * (b - a)) / (max - min);
-            let normed_u8 = normed as u8;
-            harris_normalized[(x, y)] = Rgba([normed_u8, normed_u8, normed_u8, 255]);
-            
-        }
-    }
-
-    harris_normalized
-}
