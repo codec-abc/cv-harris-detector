@@ -36,24 +36,6 @@ pub fn main() {
     let harris_result = harris_corner(&gray_image, k, blur); // block_size, k_size,
     let threshold = 50f64;
 
-    // let mut img = GrayImage::new(width, height);
-    // for x in 0..width - 1 {
-    //     for y in 0..height - 1 {
-    //         let harris_val_f64 = harris_result[(x, y)][0];
-    //         let harris_val = (harris_val_f64 * 1.0f64) as u8;
-
-    //         let value = if harris_val_f64 > threshold {
-    //             Luma::from([harris_val])
-    //         } else {
-    //             Luma::from([0u8])
-    //         };
-
-    //         img.put_pixel(x, y, value);
-    //     }
-    // }
-    // let img = DynamicImage::ImageLuma8(img);
-    // imgshow::imgshow(&img);
-
     let mut canvas = drawing::Blend(src_image.to_rgba());
 
     for x in 0..width {
