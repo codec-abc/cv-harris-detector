@@ -21,11 +21,28 @@ pub fn apply_center_symmetry_filter(
 ) -> CornerFilterResult {
 
     // see Section 3.2.1 Centrosymmetry property
+    // Basically, we check for black and white alternating around the corner.
+
+    // For example a valid corner would look like this: (B is black and W is white)
+    // | W | B | or | B | W |
+    // | B | W |    | W | B |
+
+    // while an invalid corner might look like this:
+    // | W | W |
+    // | B | W |
+
+    // This is the case for the chessboard outer corner for example.
+    // This way, they are filtered out and we only keep the inner corners.
 
     let width = image.width();
     let height = image.height();
 
     // Get all 8 pixels intensity around the current corner
+
+    // | i4 | i3 | i2 | 
+    // | i5 | __ | i1 | 
+    // | i6 | i7 | i8 |
+
     let i1: f64 = image[get_pixel_coord((x_c + 1, y_c + 0), width, height)][0] as f64;
     let i2: f64 = image[get_pixel_coord((x_c + 1, y_c + 1), width, height)][0] as f64;
     let i3: f64 = image[get_pixel_coord((x_c + 0, y_c + 1), width, height)][0] as f64;
@@ -35,6 +52,8 @@ pub fn apply_center_symmetry_filter(
     let i7: f64 = image[get_pixel_coord((x_c + 0, y_c - 1), width, height)][0] as f64;
     let i8: f64 = image[get_pixel_coord((x_c + 1, y_c - 1), width, height)][0] as f64;
 
+    // Compute differences.
+
     let d1: f64 = (i1 - i5).abs();
     let d2: f64 = (i3 - i7).abs();
     let d3: f64 = (i1 + i5 - i3 - i7).abs();
@@ -42,6 +61,7 @@ pub fn apply_center_symmetry_filter(
     let d5: f64 = (i4 - i8).abs();
     let d6: f64 = (i2 + i6 - i4 - i8).abs();
 
+    // check if criterion is met
     let is_real_corner =
         (d1 < p_threshold * d3 && d2 < p_threshold * d3) ||
         (d4 < p_threshold * d6 && d5 < p_threshold * d6);
@@ -85,6 +105,7 @@ pub fn apply_neighbor_distance_filter(
 ) -> CornerFilterResult  
 {
     // see 3.2.2 Distance property:
+    // Basically, if a corner does not have at least 3 neighbors close enough it is not valid
 
     let (self_x, self_y) = corners[corner_index_to_check];
     let self_x_f64 = self_x as f64;
@@ -105,7 +126,6 @@ pub fn apply_neighbor_distance_filter(
         let other_y_f64 = other_y as f64;
 
         let distance = distance((self_x_f64, self_y_f64), (other_x_f64, other_y_f64));
-        //((self_x_f64 - other_x_f64).powi(2) + (self_y_f64 - other_y_f64).powi(2)).sqrt();
 
         if distance <= distance_threshold {
             neighbor_count = neighbor_count + 1;
@@ -126,6 +146,11 @@ pub fn apply_neighbor_angle_filter(
 ) -> CornerFilterResult 
 {
     // see Section 3.2.3 Angle property:
+    // Basically, the 2 most neighbors of a valid corners should make an a somewhat big angle.
+    // Even with perspective.
+
+    // Can't have 2 neighbors if we have not at least 3 corners in total.
+    assert!(corners.len() >= 3);
 
     let (self_x, self_y) = corners[corner_index_to_check];
     let self_x_f64 = self_x as f64;
@@ -135,6 +160,7 @@ pub fn apply_neighbor_angle_filter(
     let mut closer_neighbor_1 = (std::f64::MAX, (0f64, 0f64));
     let mut closer_neighbor_2 = (std::f64::MAX, (0f64, 0f64));
 
+    // Iterate over all corners to find the 2 closest
     for index in 0..corners.len() {
 
         // Don't make sense to check if pixel is close with itself
@@ -147,7 +173,6 @@ pub fn apply_neighbor_angle_filter(
         let other_x_f64 = other_x as f64;
         let other_y_f64 = other_y as f64;
 
-        //let distance = ((self_x_f64 - other_x_f64).powi(2) + (self_y_f64 - other_y_f64).powi(2)).sqrt();
         let distance = distance((self_x_f64, self_y_f64), (other_x_f64, other_y_f64));
 
         let mut current_neighbor = (distance, (other_x_f64, other_y_f64));
