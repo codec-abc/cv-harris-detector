@@ -39,19 +39,36 @@ pub fn main() {
     let min = harris_result.min;
     let max = harris_result.max;
 
-    let threshold = 200f64;
+    let threshold = 150;
 
-    let mut canvas = drawing::Blend(src_image.to_rgba());
+    let display_over_original_image = false;
+
+    let mut harris_normed: ImageBuffer<Rgba<u8>, Vec<u8>> = ImageBuffer::new(width, height);
 
     for x in 0..width {
         for y in 0..height {
             let harris_val_f64 = harris_result.detector_result[(x, y)][0];
 
-            // min max normlization
+            // min max normalization
             let a = 0.0f64;
             let b = 255.0f64;
 
             let normed = a + ((harris_val_f64 - min) * (b - a)) / (max - min);
+            let normed_u8 = normed as u8;
+            harris_normed[(x, y)] = Rgba([normed_u8, normed_u8, normed_u8, 255]);
+            
+        }
+    }
+
+    let mut canvas = if display_over_original_image {
+        drawing::Blend(src_image.to_rgba())
+    } else {
+        drawing::Blend(harris_normed.clone())
+    };
+
+    for x in 0..width {
+        for y in 0..height {
+            let normed = harris_normed[(x, y)][0];
 
             if normed > threshold {
                 drawing::draw_cross_mut(&mut canvas, Rgba([0, 255, 255, 128]), x as i32, y as i32);
