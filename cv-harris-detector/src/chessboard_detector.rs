@@ -3,6 +3,7 @@
 //http://ir.hfcas.ac.cn:8080/bitstream/334002/31604/1/Automatic%20chessboard%20corner%20detection%20method.pdf
 
 use image::{ImageBuffer, Luma};
+use std::collections::HashMap;
 
 type GreyImage = ImageBuffer<Luma<u8>, Vec<u8>>;
 type CornerLocation = (i32, i32);
@@ -213,8 +214,7 @@ fn norm((a_x, a_y) : (f64, f64)) -> f64 {
 }
 
 // return the index of the corners
-fn get_corners(corners: &[CornerLocation]) 
--> (usize, usize, usize, usize) {
+fn get_corners(corners: &[CornerLocation]) -> (usize, usize, usize, usize) {
     let mut a = std::i64::MAX; // top-left corner
     let mut b = std::i64::MIN; // top-right corner
     let mut c = std::i64::MAX; // bottom-left corner
@@ -256,4 +256,52 @@ fn get_corners(corners: &[CornerLocation])
     }
 
     (a_index, b_index, c_index, d_index)
+}
+
+struct chessboard_detector_parameters {
+    r: f64,
+    p: f64,
+    d: f64,
+    t: f64,
+}
+
+fn compute_adaptive_parameters(a_min: f64, a_max: f64) -> chessboard_detector_parameters {
+
+    let r = 0.7f64 * a_min;
+    let p = 0.3f64 * a_max / a_min;
+    let d = 2.0f64 * a_max;
+    let t = 0.4f64 * a_max / a_min;
+
+    chessboard_detector_parameters { r, p, d, t}
+}
+
+fn compute_neighbor_distance_histogram(corners: &[CornerLocation]) -> HashMap<u32, u32> {
+    let mut histogram = HashMap::<u32, u32>::new();
+
+    for index_1 in 0..corners.len() {
+        let (self_x, self_y) = corners[index_1];
+        let self_x_f64 = self_x as f64;
+        let self_y_f64 = self_y as f64;
+
+        for index_2 in index_1..corners.len() {
+
+            // Don't make sense to check if pixel with itself
+            if index_1 == index_2 {
+                continue;
+            }
+
+            let (other_x, other_y) = corners[index_2];
+
+            let other_x_f64 = other_x as f64;
+            let other_y_f64 = other_y as f64;
+
+            let distance = distance((self_x_f64, self_y_f64), (other_x_f64, other_y_f64));
+            let distance = distance as u32;
+
+            *histogram.entry(distance).or_insert(0) += 1;
+
+        }
+    }
+
+    histogram
 }
