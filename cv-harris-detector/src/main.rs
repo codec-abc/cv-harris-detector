@@ -1,4 +1,4 @@
-use image::{DynamicImage, Rgba};
+use image::{DynamicImage, Rgba, imageops::FilterType};
 use imageproc::{drawing};
 
 // Run with cargo run --bin cv-harris-detector
@@ -17,20 +17,42 @@ pub fn main_harris() {
     let gray_image = src_image.to_luma();
     let width = gray_image.width();
     let height = gray_image.height();
+    let old_gray_image = gray_image;
+
+    // resize
+    let scale_ratio = 2;
+    let gray_image = 
+        src_image.resize(
+            width / scale_ratio, 
+            height / scale_ratio, 
+            FilterType::Lanczos3).to_luma();
+
+    let width = gray_image.width();
+    let height = gray_image.height();
+    //
 
     let k: f64 = 0.04f64; // Harris detector free parameter. The higher the value the less it detects.
-    let blur = Some(0.3f32); // TODO: fix this. For very low value the image starts to be completely white
+    let blur = None;//Some(0.3f32); // TODO: fix this. For very low value the image starts to be completely white
 
     let harris_result = cv_harris_detector::harris_corner(&gray_image, k, blur);
     let harris_normed = harris_result.min_max_normalized_harris();
 
-    let display_over_original_image = false;
-    let threshold = 150;
+    let harris_image = DynamicImage::ImageRgba8(harris_normed.clone());
+
+    let harris_image = 
+        harris_image.resize(
+            old_gray_image.width(), 
+            old_gray_image.height(), 
+            FilterType::Lanczos3
+        );
+
+    let display_over_original_image = true;
+    let threshold = 100;
 
     let mut canvas = if display_over_original_image {
         drawing::Blend(src_image.to_rgba())
     } else {
-        drawing::Blend(harris_normed.clone())
+        drawing::Blend(harris_image.to_rgba())
     };
 
     let mut number_of_corner = 0;
@@ -39,7 +61,9 @@ pub fn main_harris() {
             let normed = harris_normed[(x, y)][0];
 
             if normed > threshold {
-                drawing::draw_cross_mut(&mut canvas, Rgba([0, 255, 255, 128]), x as i32, y as i32);
+                let x = (x * scale_ratio) as i32;
+                let y = (y * scale_ratio) as i32;
+                drawing::draw_cross_mut(&mut canvas, Rgba([0, 255, 255, 128]), x, y);
                 number_of_corner = number_of_corner + 1;
             }
             
@@ -74,6 +98,6 @@ pub fn main_chessboard_detector() {
 
 
 pub fn main() {
-    //main_harris();
-    main_chessboard_detector();
+    main_harris();
+    //main_chessboard_detector();
 }
