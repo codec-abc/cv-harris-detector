@@ -20,6 +20,7 @@ pub fn main_harris() {
     let harris_threshold = 20;
     let contrast_threshold = 120;
     let non_maximum_suppression_radius = 6;
+    let window_size_ratio = 0.5f64;// TODO : should be 0.8;
     let k: f64 = 0.04f64; // Harris detector free parameter. The higher the value the less it detects.
     //let blur = None; //Some(0.3f32); // TODO: fix this. For very low value the image starts to be completely white
 
@@ -84,7 +85,7 @@ pub fn main_harris() {
     // TODO filter corners
 
     let closest_neighbor_distance_histogram = compute_closest_neighbor_distance_histogram(&corners);
-    let window_size = closest_neighbor_distance_histogram.window_size_that_cover_x_percent(0.8f64);
+    let window_size = closest_neighbor_distance_histogram.window_size_that_cover_x_percent(window_size_ratio); 
     let (mean, std_dev) = closest_neighbor_distance_histogram.mean_val_and_std_dev_for_window(window_size);
 
     println!(
@@ -120,17 +121,17 @@ pub fn main_harris() {
         //         corner_location
         //     );
 
-        // let corner_filter = apply_neighbor_distance_filter(
-        //     chessboard_parameters.d,
-        //     &corners,
-        //     index,
-        // );
-
-        let corner_filter = apply_neighbor_angle_filter(
-            chessboard_parameters.t,
+        let corner_filter = apply_neighbor_distance_filter(
+            chessboard_parameters.d,
             &corners,
             index,
         );
+
+        // let corner_filter = apply_neighbor_angle_filter(
+        //     chessboard_parameters.t,
+        //     &corners,
+        //     index,
+        // );
 
         if corner_filter == CornerFilterResult::FakeCorner {
             println!("we have got a fake corner");
@@ -140,8 +141,8 @@ pub fn main_harris() {
     }
     
     for (index, (x, y)) in corners.iter().enumerate()  {
-        if !wrong_corners_indexes.contains(&index) {
-            
+        let is_fake_corner = wrong_corners_indexes.contains(&index);
+        if is_fake_corner { 
             drawing::draw_filled_circle_mut(
                 &mut canvas, 
                 (*x as i32 , *y as i32),
