@@ -15,10 +15,10 @@ pub fn main_harris() {
     // and https://docs.rs/image/0.23.8/src/image/color.rs.html#415
 
     let display_over_original_image = true;
-    let harris_threshold = 80;
-    let contrast_threshold = 130;
-    let non_maximum_suppression_radius = 10;
-    let k: f64 = 0.05f64; // Harris detector free parameter. The higher the value the less it detects.
+    let harris_threshold = 20;
+    let contrast_threshold = 120;
+    let non_maximum_suppression_radius = 6;
+    let k: f64 = 0.04f64; // Harris detector free parameter. The higher the value the less it detects.
     let blur = None; //Some(0.3f32); // TODO: fix this. For very low value the image starts to be completely white
 
     let gray_image = src_image.to_luma();
@@ -38,8 +38,8 @@ pub fn main_harris() {
     let height = gray_image.height();
     //
 
-    let gray_image = imageproc::contrast::equalize_histogram(&gray_image);
-    let gray_image = imageproc::contrast::threshold(&gray_image, contrast_threshold);
+    //let gray_image = imageproc::contrast::equalize_histogram(&gray_image);
+    //let gray_image = imageproc::contrast::threshold(&gray_image, contrast_threshold);
 
     let harris_result = cv_harris_detector::harris_corner(&gray_image, k, blur);
 
@@ -56,6 +56,7 @@ pub fn main_harris() {
     };
 
     let mut number_of_corner = 0;
+    
     for x in 0..width {
         for y in 0..height {
             let normed = harris_normed_non_max_suppressed[(x, y)][0];
@@ -79,24 +80,8 @@ pub fn main_harris() {
 
     println!("detected {} corners", number_of_corner);
 
-    let out_img = DynamicImage::ImageRgb8(canvas.0);
-    imgshow::imgshow(&out_img);
-}
+    // TODO filter corners
 
-pub fn main_chessboard_detector() {
-    let image_path = "./cv-harris-detector/test_images/bouguet/Image1.tif";
-    //let image_path = "./cv-harris-detector/test_images/fileListImageUnDist.jpg";
-
-    let src_image = image::open(image_path).expect("failed to open image file");
-
-    let f = 0.5f32;
-    let blurred_image = imageproc::filter::gaussian_blur_f32(&src_image.to_rgb(), f);
-
-    // let gray_image = src_image.to_luma();
-    // let width = gray_image.width();
-    // let height = gray_image.height();
-
-    let canvas = drawing::Blend(blurred_image);
 
 
     let out_img = DynamicImage::ImageRgb8(canvas.0);
@@ -106,7 +91,6 @@ pub fn main_chessboard_detector() {
 
 pub fn main() {
     main_harris();
-    //main_chessboard_detector();
 }
 
 // TODO: Non maximum suppression for Harris detector?
