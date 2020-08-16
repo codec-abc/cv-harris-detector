@@ -192,7 +192,7 @@ fn norm((a_x, a_y) : (f64, f64)) -> f64 {
     (a_x.powi(2) + a_y.powi(2)).sqrt()
 }
 
-struct ChessboardCorners {
+pub struct ChessboardCorners {
     corner_a_index: usize,
     corner_a_location: CornerLocation,
 
@@ -207,7 +207,7 @@ struct ChessboardCorners {
 }
 
 // return the index of the corners
-fn get_corners(corners: &[CornerLocation]) -> ChessboardCorners {
+pub fn get_corners(corners: &[CornerLocation]) -> ChessboardCorners {
     let mut a = std::i64::MAX; // top-left corner
     let mut b = std::i64::MIN; // top-right corner
     let mut c = std::i64::MAX; // bottom-left corner
@@ -263,14 +263,14 @@ fn get_corners(corners: &[CornerLocation]) -> ChessboardCorners {
     }
 }
 
-struct chessboard_detector_parameters {
+pub struct chessboard_detector_parameters {
     r: f64,
     p: f64,
     d: f64,
     t: f64,
 }
 
-fn compute_adaptive_parameters(a_min: f64, a_max: f64) -> chessboard_detector_parameters {
+pub fn compute_adaptive_parameters(a_min: f64, a_max: f64) -> chessboard_detector_parameters {
 
     let r = 0.7f64 * a_min;
     let p = 0.3f64 * a_max / a_min;
@@ -280,13 +280,99 @@ fn compute_adaptive_parameters(a_min: f64, a_max: f64) -> chessboard_detector_pa
     chessboard_detector_parameters { r, p, d, t }
 }
 
-struct DistanceHistogram {
-    histogram: HashMap::<u32, u32>,
+pub struct ClosestNeighborDistanceHistorgram {
+    histogram: HashMap::<u32, u32>, // key : distance, value: number of elements at that distance.
     number_of_values: u32,
     peak_index: u32,
 }
 
-fn compute_neighbor_distance_histogram(corners: &[CornerLocation]) -> DistanceHistogram {
+impl ClosestNeighborDistanceHistorgram {
+    pub fn window_subset_ratio(&self, window_center: u32, window_size: u32) -> f64 {
+        let mut nb_element_in_windows = 0;
+
+        let window_min = window_center as i32 - window_size as i32;
+        let window_max = window_center as i32 + window_size as i32;
+
+        for (key, value) in &self.histogram {
+            let key = *key as i32;
+            if window_min <= key && key <= window_max {
+                nb_element_in_windows += value;
+            }
+        }
+
+        nb_element_in_windows as f64 / self.number_of_values as f64
+    }
+
+    pub fn get_peak_value(&self) -> u32 {
+        self.histogram[&self.peak_index]
+    }
+
+    pub fn get_peak_index(&self) -> u32 {
+        self.peak_index
+    }
+
+    pub fn window_size_that_cover_x_percent(&self, x: f64) -> u32 {
+        assert!(x <= 1.0f64);
+        assert!(x > 0.0f64);
+
+        let step = (self.number_of_values as f64 / 100.0f64) as u32;
+
+        let mut window_size = 0u32;
+        let mut subset_ratio = 0f64;
+
+        while subset_ratio < x {
+            subset_ratio = self.window_subset_ratio(self.peak_index, window_size);
+            window_size += step;
+        }
+
+        window_size
+    }
+
+    pub fn mean_val_and_std_dev_for_window(&self, window_size: u32) -> (f64, f64) {
+
+        let mut sub_window_histogram = HashMap::<u32, u32>::new();
+        let window_center = self.peak_index;
+
+        let window_min = window_center as i32 - window_size as i32;
+        let window_max = window_center as i32 + window_size as i32;
+
+        let mut number_of_elem_in_window = 0;
+        let mut sum = 0.0f64;
+
+        for (key, value) in &self.histogram {
+            let key = *key as i32;
+            if window_min <= key && key <= window_max {
+                sub_window_histogram.insert(key as u32, *value);
+                number_of_elem_in_window += *value;
+                sum += (key as f64) * (*value as f64);
+            }
+        }
+
+        let mean = sum / number_of_elem_in_window as f64;
+
+        let mut std_dev = 0.0f64;
+
+        for (key, value) in &self.histogram {
+            let key = *key as i32;
+            if window_min <= key && key <= window_max {
+                let value = *value as f64;
+                let key = key as f64;
+                println!("key is {}", key);
+                std_dev += value * (key as f64 - mean) * (key as f64 - mean);
+            }
+        }
+
+        std_dev = std_dev / number_of_elem_in_window as f64;
+        std_dev = std_dev.sqrt();
+
+        println!("number of elements in window {}", number_of_elem_in_window);
+
+        (mean, std_dev)
+
+    }
+}
+
+pub fn compute_closest_neighbor_distance_histogram(corners: &[CornerLocation]) -> ClosestNeighborDistanceHistorgram {
     let mut histogram = HashMap::<u32, u32>::new();
     let mut sum = 0;
 
@@ -294,6 +380,9 @@ fn compute_neighbor_distance_histogram(corners: &[CornerLocation]) -> DistanceHi
         let (self_x, self_y) = corners[index_1];
         let self_x_f64 = self_x as f64;
         let self_y_f64 = self_y as f64;
+
+        let mut closest_distance = std::f64::MAX;
+        let mut has_run = false;
 
         for index_2 in (index_1 + 1)..corners.len() {
 
@@ -308,11 +397,17 @@ fn compute_neighbor_distance_histogram(corners: &[CornerLocation]) -> DistanceHi
             let other_y_f64 = other_y as f64;
 
             let distance = distance((self_x_f64, self_y_f64), (other_x_f64, other_y_f64));
-            let distance = distance as u32;
 
+            if distance <= closest_distance {
+                closest_distance = distance;
+                has_run = true;
+            }
+        }
+
+        if has_run {
+            let distance = closest_distance as u32;
             sum += 1;
             *histogram.entry(distance).or_insert(0) += 1;
-
         }
     }
 
@@ -326,7 +421,7 @@ fn compute_neighbor_distance_histogram(corners: &[CornerLocation]) -> DistanceHi
         }
     }
 
-    DistanceHistogram {
+    ClosestNeighborDistanceHistorgram {
         histogram: histogram,
         number_of_values: sum,
         peak_index: peak_index,

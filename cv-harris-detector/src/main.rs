@@ -1,6 +1,8 @@
 use image::{DynamicImage, Rgb, imageops::FilterType};
 use imageproc::{drawing};
 
+use cv_harris_detector::*;
+
 // Run with cargo run --bin cv-harris-detector
 
 pub fn main_harris() {
@@ -55,7 +57,7 @@ pub fn main_harris() {
         drawing::Blend(harris_image)
     };
 
-    let mut number_of_corner = 0;
+    let mut corners = Vec::new();
     
     for x in 0..width {
         for y in 0..height {
@@ -72,15 +74,37 @@ pub fn main_harris() {
                     1i32,
                     Rgb([255, 0, 0]));
 
-                number_of_corner = number_of_corner + 1;
+                corners.push((x as i32, y as i32));
             }
             
         }
     }
 
-    println!("detected {} corners", number_of_corner);
+    let number_of_corners = corners.len();
+
+    println!("detected {} corners", number_of_corners);
+    println!("we should have roughly twice as corners as there is in the pattern");
 
     // TODO filter corners
+
+    let closest_neighbor_distance_histogram = compute_closest_neighbor_distance_histogram(&corners);
+    let window_size = closest_neighbor_distance_histogram.window_size_that_cover_x_percent(0.8f64);
+    let (mean, std_dev) = closest_neighbor_distance_histogram.mean_val_and_std_dev_for_window(window_size);
+
+    println!(
+        "peak index is {}, peak value is {}", 
+        closest_neighbor_distance_histogram.get_peak_index(), 
+        closest_neighbor_distance_histogram.get_peak_value()
+    );
+
+    println!("window size is {}", window_size);
+
+    println!("mean is {} std_dev is {}", mean, std_dev);
+
+    let a_min = mean - 3.0f64 * std_dev;
+    let a_max = mean + 3.0f64 * std_dev;
+
+    let chessboard_parameters = compute_adaptive_parameters(a_min, a_max);
 
 
 
