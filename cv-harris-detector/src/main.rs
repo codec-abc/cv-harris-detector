@@ -1,4 +1,4 @@
-use image::{DynamicImage, Rgba, imageops::FilterType};
+use image::{DynamicImage, Rgb, imageops::FilterType};
 use imageproc::{drawing};
 
 // Run with cargo run --bin cv-harris-detector
@@ -17,7 +17,6 @@ pub fn main_harris() {
     let gray_image = src_image.to_luma();
     let width = gray_image.width();
     let height = gray_image.height();
-    let old_gray_image = gray_image;
 
     // resize
     let scale_ratio = 2;
@@ -38,9 +37,14 @@ pub fn main_harris() {
     let blur = None;//Some(0.3f32); // TODO: fix this. For very low value the image starts to be completely white
 
     let harris_result = cv_harris_detector::harris_corner(&gray_image, k, blur);
-    let harris_normed = harris_result.min_max_normalized_harris();
+    //let harris_normed = harris_result.min_max_normalized_harris();
 
-    let harris_image = DynamicImage::ImageRgba8(harris_normed.clone());
+    let harris_normed_non_max_suppressed = 
+        harris_result.run_non_maximum_suppression(2);
+
+    //let harris_image = DynamicImage::ImageRgb8(harris_normed.clone());
+
+    let harris_image = DynamicImage::ImageLuma8(harris_normed_non_max_suppressed.clone()).to_rgb();
 
     // let harris_image = 
     //     harris_image.resize(
@@ -50,24 +54,24 @@ pub fn main_harris() {
     //     );
 
     let display_over_original_image = true;
-    let threshold = 80;
+    let threshold = 150;
 
     let mut canvas = if display_over_original_image {
-        //drawing::Blend(src_image.to_rgba())
-        drawing::Blend(DynamicImage::ImageLuma8(gray_image).to_rgba())
+        //drawing::Blend(src_image.to_rgb())
+        drawing::Blend(DynamicImage::ImageLuma8(gray_image).to_rgb())
     } else {
-        drawing::Blend(harris_image.to_rgba())
+        drawing::Blend(harris_image)
     };
 
     let mut number_of_corner = 0;
     for x in 0..width {
         for y in 0..height {
-            let normed = harris_normed[(x, y)][0];
+            let normed = harris_normed_non_max_suppressed[(x, y)][0];
 
             if normed > threshold {
                 //let x = (x * scale_ratio) as i32;
                 //let y = (y * scale_ratio) as i32;
-                drawing::draw_cross_mut(&mut canvas, Rgba([0, 255, 255, 128]), x as i32 , y as i32);
+                drawing::draw_cross_mut(&mut canvas, Rgb([0, 255, 255]), x as i32 , y as i32);
                 number_of_corner = number_of_corner + 1;
             }
             
@@ -76,7 +80,7 @@ pub fn main_harris() {
 
     println!("detected {} corners", number_of_corner);
 
-    let out_img = DynamicImage::ImageRgba8(canvas.0);
+    let out_img = DynamicImage::ImageRgb8(canvas.0);
     imgshow::imgshow(&out_img);
 }
 

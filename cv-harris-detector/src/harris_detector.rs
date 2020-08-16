@@ -1,5 +1,7 @@
-use image::{ImageBuffer, Luma, Rgba};
+use image::{DynamicImage, ImageBuffer, Luma, Rgb};
 use imageproc::{filter, gradients};
+
+use crate::common::get_pixel_coord;
 
 // see
 // http://www.cse.psu.edu/~rtc12/CSE486/lecture06.pdf
@@ -23,12 +25,12 @@ impl HarrisDetectorResult {
         self.detector_result.clone()
     }
 
-    pub fn min_max_normalized_harris(&self) -> ImageBuffer<Rgba<u8>, Vec<u8>> { //harris_result: &HarrisDetectorResult
+    pub fn min_max_normalized_harris(&self) -> ImageBuffer<Rgb<u8>, Vec<u8>> {
     
         let width = self.width;
         let height = self.height;
     
-        let mut harris_normalized: ImageBuffer<Rgba<u8>, Vec<u8>> = ImageBuffer::new(width, height);
+        let mut harris_normalized: ImageBuffer<Rgb<u8>, Vec<u8>> = ImageBuffer::new(width, height);
     
         let min = self.min;
         let max = self.max;
@@ -43,11 +45,46 @@ impl HarrisDetectorResult {
     
                 let normed = a + ((harris_val_f64 - min) * (b - a)) / (max - min);
                 let normed_u8 = normed as u8;
-                harris_normalized[(x, y)] = Rgba([normed_u8, normed_u8, normed_u8, 255]);
+                harris_normalized[(x, y)] = Rgb([normed_u8, normed_u8, normed_u8]);
                 
             }
         }
     
+        harris_normalized
+    }
+
+    pub fn run_non_maximum_suppression(
+        &self,
+        non_maximum_suppression_radius: u32
+    ) -> ImageBuffer<Luma<u8>, Vec<u8>> {
+        let mut harris_normalized = DynamicImage::ImageRgb8(self.min_max_normalized_harris()).to_luma();
+
+        let width = self.width;
+        let height = self.height;
+
+        for x in 0..width as i32 {
+            for y in 0..height as i32 {
+                let pixel_coord = (x as u32, y as u32);
+                let value = harris_normalized[pixel_coord][0];
+
+                let non_maximum_suppression_radius = non_maximum_suppression_radius as i32 + 1;
+
+                for i in (-non_maximum_suppression_radius + 1)..non_maximum_suppression_radius {
+                    for j in (-non_maximum_suppression_radius + 1)..non_maximum_suppression_radius {
+                        if i == 0 && j == 0 {
+                            continue;
+                        }
+
+                        let other_value = harris_normalized[get_pixel_coord((x + i, y + j), width, height)][0];
+
+                        if value < other_value {
+                            harris_normalized[pixel_coord] = Luma([0]);
+                        }
+                    }
+                }
+            }
+        }
+
         harris_normalized
     }
 }
