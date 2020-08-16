@@ -21,17 +21,20 @@ pub fn main_harris() {
 
     // resize
     let scale_ratio = 2;
+
     let gray_image = 
         src_image.resize(
             width / scale_ratio, 
             height / scale_ratio, 
             FilterType::Lanczos3).to_luma();
 
+    let gray_image = imageproc::contrast::equalize_histogram(&gray_image);
+
     let width = gray_image.width();
     let height = gray_image.height();
     //
 
-    let k: f64 = 0.04f64; // Harris detector free parameter. The higher the value the less it detects.
+    let k: f64 = 0.05f64; // Harris detector free parameter. The higher the value the less it detects.
     let blur = None;//Some(0.3f32); // TODO: fix this. For very low value the image starts to be completely white
 
     let harris_result = cv_harris_detector::harris_corner(&gray_image, k, blur);
@@ -39,18 +42,19 @@ pub fn main_harris() {
 
     let harris_image = DynamicImage::ImageRgba8(harris_normed.clone());
 
-    let harris_image = 
-        harris_image.resize(
-            old_gray_image.width(), 
-            old_gray_image.height(), 
-            FilterType::Lanczos3
-        );
+    // let harris_image = 
+    //     harris_image.resize(
+    //         old_gray_image.width(), 
+    //         old_gray_image.height(), 
+    //         FilterType::Lanczos3
+    //     );
 
     let display_over_original_image = true;
-    let threshold = 100;
+    let threshold = 80;
 
     let mut canvas = if display_over_original_image {
-        drawing::Blend(src_image.to_rgba())
+        //drawing::Blend(src_image.to_rgba())
+        drawing::Blend(DynamicImage::ImageLuma8(gray_image).to_rgba())
     } else {
         drawing::Blend(harris_image.to_rgba())
     };
@@ -61,9 +65,9 @@ pub fn main_harris() {
             let normed = harris_normed[(x, y)][0];
 
             if normed > threshold {
-                let x = (x * scale_ratio) as i32;
-                let y = (y * scale_ratio) as i32;
-                drawing::draw_cross_mut(&mut canvas, Rgba([0, 255, 255, 128]), x, y);
+                //let x = (x * scale_ratio) as i32;
+                //let y = (y * scale_ratio) as i32;
+                drawing::draw_cross_mut(&mut canvas, Rgba([0, 255, 255, 128]), x as i32 , y as i32);
                 number_of_corner = number_of_corner + 1;
             }
             
@@ -101,3 +105,5 @@ pub fn main() {
     main_harris();
     //main_chessboard_detector();
 }
+
+// TODO: Non maximum suppression for Harris detector?

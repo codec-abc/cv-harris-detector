@@ -1,6 +1,8 @@
 // see 
 // https://res.mdpi.com/d_attachment/sensors/sensors-10-02027/article_deploy/sensors-10-02027.pdf
 // http://ir.hfcas.ac.cn:8080/bitstream/334002/31604/1/Automatic%20chessboard%20corner%20detection%20method.pdf
+// https://web.stanford.edu/class/cs231a/prev_projects_2015/chess.pdf
+// https://www.isprs.org/proceedings/XXXVII/congress/5_pdf/04.pdf
 
 use image::{ImageBuffer, Luma};
 use std::collections::HashMap;
@@ -213,8 +215,22 @@ fn norm((a_x, a_y) : (f64, f64)) -> f64 {
     (a_x.powi(2) + a_y.powi(2)).sqrt()
 }
 
+struct ChessboardCorners {
+    corner_a_index: usize,
+    corner_a_location: CornerLocation,
+
+    corner_b_index: usize,
+    corner_b_location: CornerLocation,
+
+    corner_c_index: usize,
+    corner_c_location: CornerLocation,
+
+    corner_d_index: usize,
+    corner_d_location: CornerLocation,
+}
+
 // return the index of the corners
-fn get_corners(corners: &[CornerLocation]) -> (usize, usize, usize, usize) {
+fn get_corners(corners: &[CornerLocation]) -> ChessboardCorners {
     let mut a = std::i64::MAX; // top-left corner
     let mut b = std::i64::MIN; // top-right corner
     let mut c = std::i64::MAX; // bottom-left corner
@@ -255,7 +271,19 @@ fn get_corners(corners: &[CornerLocation]) -> (usize, usize, usize, usize) {
 
     }
 
-    (a_index, b_index, c_index, d_index)
+    ChessboardCorners {
+        corner_a_index: a_index,
+        corner_a_location: corners[a_index],
+    
+        corner_b_index: b_index,
+        corner_b_location: corners[b_index],
+    
+        corner_c_index: c_index,
+        corner_c_location: corners[c_index],
+    
+        corner_d_index: d_index,
+        corner_d_location: corners[d_index]
+    }
 }
 
 struct chessboard_detector_parameters {
@@ -272,7 +300,7 @@ fn compute_adaptive_parameters(a_min: f64, a_max: f64) -> chessboard_detector_pa
     let d = 2.0f64 * a_max;
     let t = 0.4f64 * a_max / a_min;
 
-    chessboard_detector_parameters { r, p, d, t}
+    chessboard_detector_parameters { r, p, d, t }
 }
 
 struct DistanceHistogram {
