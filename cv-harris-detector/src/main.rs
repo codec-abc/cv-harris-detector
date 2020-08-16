@@ -99,6 +99,7 @@ pub fn main_harris() {
     println!("mean is {} std_dev is {}", mean, std_dev);
 
     let a_min = mean - 3.0f64 * std_dev;
+    let a_min = if a_min < 0f64 { 0.0f64 } else  { a_min };
     let a_max = mean + 3.0f64 * std_dev;
 
     println!("a_min is {}, a_max is {}", a_min, a_max);
