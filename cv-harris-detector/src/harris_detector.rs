@@ -39,7 +39,7 @@ impl HarrisDetectorResult {
             for y in 0..height {
                 let harris_val_f64 = self.detector_result[(x, y)][0];
     
-                // min max normalization
+                // min max normalization, so all values are in [0; 255] range
                 let a = 0.0f64;
                 let b = 255.0f64;
     
@@ -69,6 +69,12 @@ impl HarrisDetectorResult {
                 let value = harris_normalized[pixel_coord][0];
 
                 let non_maximum_suppression_radius = non_maximum_suppression_radius as i32 + 1;
+                
+                // if value is below threshold we set it to 0 and continue
+                if value < harris_threshold {
+                    harris_normalized[pixel_coord] = Luma([0]);
+                    continue;
+                }
 
                 for i in (-non_maximum_suppression_radius + 1)..non_maximum_suppression_radius {
                     for j in (-non_maximum_suppression_radius + 1)..non_maximum_suppression_radius {
@@ -78,7 +84,9 @@ impl HarrisDetectorResult {
 
                         let other_value = harris_normalized[get_pixel_coord((x + i, y + j), width, height)][0];
 
-                        if value >= harris_threshold && value <= other_value {
+                        // If there is a pixel with greater Harris response in the surrounding
+                        // this pixel become also 0.
+                        if value <= other_value {
                             harris_normalized[pixel_coord] = Luma([0]);
                         }
                     }
