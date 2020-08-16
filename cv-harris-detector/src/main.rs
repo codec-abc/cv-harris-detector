@@ -21,13 +21,13 @@ pub fn main_harris() {
     let contrast_threshold = 120;
     let non_maximum_suppression_radius = 6;
     let k: f64 = 0.04f64; // Harris detector free parameter. The higher the value the less it detects.
-    let blur = None; //Some(0.3f32); // TODO: fix this. For very low value the image starts to be completely white
+    //let blur = None; //Some(0.3f32); // TODO: fix this. For very low value the image starts to be completely white
 
     let gray_image = src_image.to_luma();
     let width = gray_image.width();
     let height = gray_image.height();
 
-    // resize
+    // resize-start
     let scale_ratio = 1;
 
     let gray_image = 
@@ -38,12 +38,12 @@ pub fn main_harris() {
 
     let width = gray_image.width();
     let height = gray_image.height();
-    //
+    // resize-end
 
     //let gray_image = imageproc::contrast::equalize_histogram(&gray_image);
     //let gray_image = imageproc::contrast::threshold(&gray_image, contrast_threshold);
 
-    let harris_result = cv_harris_detector::harris_corner(&gray_image, k, blur);
+    let harris_result = cv_harris_detector::harris_corner(&gray_image, k);// blur;
 
     let harris_normed_non_max_suppressed = 
         harris_result.run_non_maximum_suppression(non_maximum_suppression_radius, harris_threshold);
@@ -51,7 +51,6 @@ pub fn main_harris() {
     let harris_image = DynamicImage::ImageLuma8(harris_normed_non_max_suppressed.clone()).to_rgb();
 
     let mut canvas = if display_over_original_image {
-        //drawing::Blend(src_image.to_rgb())
         drawing::Blend(DynamicImage::ImageLuma8(gray_image).to_rgb())
     } else {
         drawing::Blend(harris_image)
@@ -64,10 +63,7 @@ pub fn main_harris() {
             let normed = harris_normed_non_max_suppressed[(x, y)][0];
 
             if normed >= harris_threshold {
-                //let x = (x * scale_ratio) as i32;
-                //let y = (y * scale_ratio) as i32;
-                //drawing::draw_cross_mut(&mut canvas, Rgb([0, 255, 255]), x as i32 , y as i32);
-
+                
                 drawing::draw_filled_circle_mut(
                     &mut canvas, 
                     (x as i32 , y as i32),

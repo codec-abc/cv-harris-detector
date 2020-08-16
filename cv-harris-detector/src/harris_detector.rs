@@ -93,12 +93,14 @@ impl HarrisDetectorResult {
 pub fn harris_corner(
     gray_image: &ImageBuffer<Luma<u8>, Vec<u8>>,
     k: f64,
-    blur: Option<f32>,
+    //blur: Option<f32>,
 ) -> HarrisDetectorResult {
     let blurred_image: Option<ImageBuffer<Luma<u8>, Vec<u8>>>;
 
     // TODO : fix blur, it doesn't work great
     // may use http://dev.theomader.com/gaussian-kernel-calculator/
+
+    /*
     let gray_image: &ImageBuffer<Luma<u8>, Vec<u8>> = match blur {
         Some(f) => {
             blurred_image = Some(filter::gaussian_blur_f32(&gray_image, f));
@@ -106,6 +108,7 @@ pub fn harris_corner(
         }
         None => gray_image,
     };
+    */
 
     let sobel_horizontal = gradients::horizontal_sobel(&gray_image);
     let sobel_vertical = gradients::vertical_sobel(&gray_image);
