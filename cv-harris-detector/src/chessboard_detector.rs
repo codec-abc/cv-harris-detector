@@ -264,10 +264,10 @@ pub fn get_corners(corners: &[CornerLocation]) -> ChessboardCorners {
 }
 
 pub struct chessboard_detector_parameters {
-    r: f64,
-    p: f64,
-    d: f64,
-    t: f64,
+    pub r: f64,
+    pub p: f64,
+    pub d: f64,
+    pub t: f64,
 }
 
 pub fn compute_adaptive_parameters(a_min: f64, a_max: f64) -> chessboard_detector_parameters {
@@ -280,13 +280,13 @@ pub fn compute_adaptive_parameters(a_min: f64, a_max: f64) -> chessboard_detecto
     chessboard_detector_parameters { r, p, d, t }
 }
 
-pub struct ClosestNeighborDistanceHistorgram {
+pub struct ClosestNeighborDistanceHistogram {
     histogram: HashMap::<u32, u32>, // key : distance, value: number of elements at that distance.
     number_of_values: u32,
     peak_index: u32,
 }
 
-impl ClosestNeighborDistanceHistorgram {
+impl ClosestNeighborDistanceHistogram {
     pub fn window_subset_ratio(&self, window_center: u32, window_size: u32) -> f64 {
         let mut nb_element_in_windows = 0;
 
@@ -357,7 +357,6 @@ impl ClosestNeighborDistanceHistorgram {
             if window_min <= key && key <= window_max {
                 let value = *value as f64;
                 let key = key as f64;
-                println!("key is {}", key);
                 std_dev += value * (key as f64 - mean) * (key as f64 - mean);
             }
         }
@@ -372,7 +371,7 @@ impl ClosestNeighborDistanceHistorgram {
     }
 }
 
-pub fn compute_closest_neighbor_distance_histogram(corners: &[CornerLocation]) -> ClosestNeighborDistanceHistorgram {
+pub fn compute_closest_neighbor_distance_histogram(corners: &[CornerLocation]) -> ClosestNeighborDistanceHistogram {
     let mut histogram = HashMap::<u32, u32>::new();
     let mut sum = 0;
 
@@ -421,7 +420,7 @@ pub fn compute_closest_neighbor_distance_histogram(corners: &[CornerLocation]) -
         }
     }
 
-    ClosestNeighborDistanceHistorgram {
+    ClosestNeighborDistanceHistogram {
         histogram: histogram,
         number_of_values: sum,
         peak_index: peak_index,

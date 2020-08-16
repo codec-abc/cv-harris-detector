@@ -64,11 +64,11 @@ pub fn main_harris() {
 
             if normed >= harris_threshold {
                 
-                drawing::draw_filled_circle_mut(
-                    &mut canvas, 
-                    (x as i32 , y as i32),
-                    1i32,
-                    Rgb([255, 0, 0]));
+                // drawing::draw_filled_circle_mut(
+                //     &mut canvas, 
+                //     (x as i32 , y as i32),
+                //     1i32,
+                //     Rgb([255, 0, 0]));
 
                 corners.push((x as i32, y as i32));
             }
@@ -100,9 +100,55 @@ pub fn main_harris() {
     let a_min = mean - 3.0f64 * std_dev;
     let a_max = mean + 3.0f64 * std_dev;
 
+    println!("a_min is {}, a_max is {}", a_min, a_max);
+
     let chessboard_parameters = compute_adaptive_parameters(a_min, a_max);
 
+    println!("p is {}", chessboard_parameters.p);
+    println!("d is {}", chessboard_parameters.d);
+    println!("t is {}", chessboard_parameters.t);
 
+    let mut wrong_corners_indexes: Vec<usize> = vec!();
+
+    for (index, (x, y)) in corners.iter().enumerate()  {
+        let corner_location = (*x, *y); 
+
+        // let corner_filter = 
+        //     apply_center_symmetry_filter(
+        //         chessboard_parameters.p,
+        //         &harris_normed_non_max_suppressed,
+        //         corner_location
+        //     );
+
+        // let corner_filter = apply_neighbor_distance_filter(
+        //     chessboard_parameters.d,
+        //     &corners,
+        //     index,
+        // );
+
+        let corner_filter = apply_neighbor_angle_filter(
+            chessboard_parameters.t,
+            &corners,
+            index,
+        );
+
+        if corner_filter == CornerFilterResult::FakeCorner {
+            println!("we have got a fake corner");
+            wrong_corners_indexes.push(index);
+        }
+        
+    }
+    
+    for (index, (x, y)) in corners.iter().enumerate()  {
+        if !wrong_corners_indexes.contains(&index) {
+            
+            drawing::draw_filled_circle_mut(
+                &mut canvas, 
+                (*x as i32 , *y as i32),
+                1i32,
+                Rgb([255, 0, 0]));
+        }
+    }
 
     let out_img = DynamicImage::ImageRgb8(canvas.0);
     imgshow::imgshow(&out_img);
