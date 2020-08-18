@@ -18,9 +18,10 @@ pub fn main_harris() {
 
     let display_over_original_image = true;
     let harris_threshold = 20;
-    let contrast_threshold = 120;
-    let non_maximum_suppression_radius = 6;
+    
+    let non_maximum_suppression_radius = 8;
     let window_size_ratio = 0.5f64;// TODO : should be 0.8;
+    let run_histogram_normalization = true;
     let k: f64 = 0.04f64; // Harris detector free parameter. The higher the value the less it detects.
     //let blur = None; //Some(0.3f32); // TODO: fix this. For very low value the image starts to be completely white
 
@@ -28,22 +29,16 @@ pub fn main_harris() {
     let width = gray_image.width();
     let height = gray_image.height();
 
-    // resize-start
-    let scale_ratio = 1;
-
-    let gray_image = 
-        src_image.resize(
-            width / scale_ratio, 
-            height / scale_ratio, 
-            FilterType::Lanczos3).to_luma();
-
-    let width = gray_image.width();
-    let height = gray_image.height();
-    // resize-end
-
     let blurred_gray_image = filter::gaussian_blur_f32(&gray_image, 2.0f32);
 
-    //let gray_image = imageproc::contrast::equalize_histogram(&gray_image);
+    let gray_image = if run_histogram_normalization {
+        let old_gray_image = gray_image;
+        imageproc::contrast::equalize_histogram(&old_gray_image)
+    } else {
+        gray_image
+    };
+
+    //let contrast_threshold = 120;
     //let gray_image = imageproc::contrast::threshold(&gray_image, contrast_threshold);
 
     let harris_result = cv_harris_detector::harris_corner(&gray_image, k);// blur;
@@ -113,12 +108,15 @@ pub fn main_harris() {
         chessboard_parameters.t = 0.9f64;
     }
 
-    // TODO : find good values for p
-    chessboard_parameters.p = 0.8f64;
+     // TODO : find good values for d
+    chessboard_parameters.d = 40f64;
 
-    println!("p is {}", chessboard_parameters.p);
-    println!("d is {}", chessboard_parameters.d);
-    println!("t is {}", chessboard_parameters.t);
+    // TODO : find good values for p
+    chessboard_parameters.p = 1.2f64;
+
+    // println!("p is {}", chessboard_parameters.p);
+    // println!("d is {}", chessboard_parameters.d);
+    // println!("t is {}", chessboard_parameters.t);
 
     let mut wrong_corners_indexes: Vec<usize> = vec!();
 
@@ -128,16 +126,13 @@ pub fn main_harris() {
 
     while has_eliminated_some_point_this_loop {
 
-        println!("iteration {} ===============", number_of_iterations);
+        // println!("iteration {} ===============", number_of_iterations);
         has_eliminated_some_point_this_loop = false;
 
         for (index, (x, y)) in corners.iter().enumerate()  {
 
-            // if wrong_corners_indexes_total.contains(&index) {
-            //     continue;
-            // }
-
-            let corner_location = (*x, *y); 
+            let corner_location = (*x, *y);
+            //TODO find good value for corner_distance;
             let corner_distance = 5;
 
             let corner_filter = 
@@ -149,7 +144,7 @@ pub fn main_harris() {
                 );
 
             if corner_filter == CornerFilterResult::FakeCorner {
-                println!("we have got a fake corner because of symmetry filter at {} {}", corner_location.0, corner_location.1);
+                //println!("we have got a fake corner because of symmetry filter at {} {}", corner_location.0, corner_location.1);
                 wrong_corners_indexes.push(index);
                 has_eliminated_some_point_this_loop = true;
                 continue;
@@ -162,7 +157,7 @@ pub fn main_harris() {
             );
 
             if corner_filter == CornerFilterResult::FakeCorner {
-                println!("we have got a fake corner because of neighbor distance filter at {} {}", corner_location.0, corner_location.1);
+                //println!("we have got a fake corner because of neighbor distance filter at {} {}", corner_location.0, corner_location.1);
                 wrong_corners_indexes.push(index);
                 has_eliminated_some_point_this_loop = true;
                 continue;
@@ -175,19 +170,18 @@ pub fn main_harris() {
             );
 
             if corner_filter == CornerFilterResult::FakeCorner {
-                println!("we have got a fake corner because of angle criterion at {} {}", corner_location.0, corner_location.1);
+                //println!("we have got a fake corner because of angle criterion at {} {}", corner_location.0, corner_location.1);
                 wrong_corners_indexes.push(index);
                 has_eliminated_some_point_this_loop = true;
             }
-            
         }
 
         wrong_corners_indexes.sort();
         wrong_corners_indexes.dedup();
         wrong_corners_indexes.reverse();
 
-        println!("corners.len() {}", corners.len());
-        println!("wrong_corners_indexes.len() {}", wrong_corners_indexes.len());
+        // println!("corners.len() {}", corners.len());
+        // println!("wrong_corners_indexes.len() {}", wrong_corners_indexes.len());
 
         for index_to_remove in &wrong_corners_indexes {
             let corner = corners[*index_to_remove];
@@ -203,15 +197,21 @@ pub fn main_harris() {
         number_of_iterations += 1;
     }
 
-    // let to_show = DynamicImage::ImageLuma8(blurred_gray_image);
-    // imgshow::imgshow(&to_show);
+    // println!("we eliminated corners for {} round(s)", number_of_iterations);
 
-    println!("we eliminated corners for {} round(s)", number_of_iterations);
+    let draw_eliminated = false;
     
-    //for (index, (x, y)) in corners_eliminated  {
-    for (x, y) in corners_eliminated  {
-        let is_fake_corner = true;// wrong_corners_indexes_total.contains(&index);
-        if is_fake_corner {
+    if draw_eliminated {
+        for (x, y) in corners_eliminated  {
+            drawing::draw_filled_circle_mut(
+                &mut canvas, 
+                (x as i32 , y as i32),
+                1i32,
+                Rgb([255, 0, 0]));
+        }
+    } else {
+
+        for (x, y) in corners  {
             drawing::draw_filled_circle_mut(
                 &mut canvas, 
                 (x as i32 , y as i32),
@@ -228,5 +228,3 @@ pub fn main_harris() {
 pub fn main() {
     main_harris();
 }
-
-// TODO: Non maximum suppression for Harris detector?
