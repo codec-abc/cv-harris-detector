@@ -21,6 +21,7 @@ pub enum CornerFilterResult {
 // call this for every corners
 pub fn apply_center_symmetry_filter(
     p_threshold : f64, // should be in [0; 1] range
+    corner_distance: u32,
     image: &GreyImage, 
     (x_c, y_c): CornerLocation
 ) -> CornerFilterResult {
@@ -43,14 +44,13 @@ pub fn apply_center_symmetry_filter(
     let height = image.height();
 
     // TODO: use bigger window than a 3x3 window
-    // Get all 8 pixels intensity around the current corner
+    // Get all 8 pixels intensity around the current corner (they may be further apart than 1 pixel, thus the corner_distance)
 
     // | i4 | i3 | i2 | 
     // | i5 | __ | i1 | 
     // | i6 | i7 | i8 |
 
-    let size = 5;
-    let delta_s = size;
+    let delta_s = corner_distance as i32;
     let delta_0 = 0;
 
     let i1: f64 = image[get_pixel_coord((x_c + delta_s, y_c + delta_0), width, height)][0] as f64;

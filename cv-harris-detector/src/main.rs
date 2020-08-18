@@ -138,10 +138,12 @@ pub fn main_harris() {
             // }
 
             let corner_location = (*x, *y); 
+            let corner_distance = 5;
 
             let corner_filter = 
                 apply_center_symmetry_filter(
                     chessboard_parameters.p,
+                    corner_distance,
                     &blurred_gray_image,
                     corner_location
                 );
