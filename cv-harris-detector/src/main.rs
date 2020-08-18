@@ -1,5 +1,5 @@
 use image::{DynamicImage, Rgb, imageops::FilterType};
-use imageproc::{drawing};
+use imageproc::{drawing, filter};
 
 use cv_harris_detector::*;
 
@@ -40,6 +40,8 @@ pub fn main_harris() {
     let width = gray_image.width();
     let height = gray_image.height();
     // resize-end
+
+    let blurred_gray_image = filter::gaussian_blur_f32(&gray_image, 2.0f32);
 
     //let gray_image = imageproc::contrast::equalize_histogram(&gray_image);
     //let gray_image = imageproc::contrast::threshold(&gray_image, contrast_threshold);
@@ -111,6 +113,9 @@ pub fn main_harris() {
         chessboard_parameters.t = 0.9f64;
     }
 
+    // TODO : find good values for p
+    chessboard_parameters.p = 0.8f64;
+
     println!("p is {}", chessboard_parameters.p);
     println!("d is {}", chessboard_parameters.d);
     println!("t is {}", chessboard_parameters.t);
@@ -134,12 +139,19 @@ pub fn main_harris() {
 
             let corner_location = (*x, *y); 
 
-            // let corner_filter = 
-            //     apply_center_symmetry_filter(
-            //         chessboard_parameters.p,
-            //         &harris_normed_non_max_suppressed,
-            //         corner_location
-            //     );
+            let corner_filter = 
+                apply_center_symmetry_filter(
+                    chessboard_parameters.p,
+                    &blurred_gray_image,
+                    corner_location
+                );
+
+            if corner_filter == CornerFilterResult::FakeCorner {
+                println!("we have got a fake corner because of symmetry filter at {} {}", corner_location.0, corner_location.1);
+                wrong_corners_indexes.push(index);
+                has_eliminated_some_point_this_loop = true;
+                continue;
+            }
 
             let corner_filter = apply_neighbor_distance_filter(
                 chessboard_parameters.d,
@@ -189,13 +201,15 @@ pub fn main_harris() {
         number_of_iterations += 1;
     }
 
+    // let to_show = DynamicImage::ImageLuma8(blurred_gray_image);
+    // imgshow::imgshow(&to_show);
+
     println!("we eliminated corners for {} round(s)", number_of_iterations);
     
     //for (index, (x, y)) in corners_eliminated  {
     for (x, y) in corners_eliminated  {
         let is_fake_corner = true;// wrong_corners_indexes_total.contains(&index);
-        if is_fake_corner { 
-            println!("location is {} {}", x, y);
+        if is_fake_corner {
             drawing::draw_filled_circle_mut(
                 &mut canvas, 
                 (x as i32 , y as i32),

@@ -49,14 +49,18 @@ pub fn apply_center_symmetry_filter(
     // | i5 | __ | i1 | 
     // | i6 | i7 | i8 |
 
-    let i1: f64 = image[get_pixel_coord((x_c + 1, y_c + 0), width, height)][0] as f64;
-    let i2: f64 = image[get_pixel_coord((x_c + 1, y_c + 1), width, height)][0] as f64;
-    let i3: f64 = image[get_pixel_coord((x_c + 0, y_c + 1), width, height)][0] as f64;
-    let i4: f64 = image[get_pixel_coord((x_c - 1, y_c + 1), width, height)][0] as f64;
-    let i5: f64 = image[get_pixel_coord((x_c - 1, y_c + 0), width, height)][0] as f64;
-    let i6: f64 = image[get_pixel_coord((x_c - 1, y_c - 1), width, height)][0] as f64;
-    let i7: f64 = image[get_pixel_coord((x_c + 0, y_c - 1), width, height)][0] as f64;
-    let i8: f64 = image[get_pixel_coord((x_c + 1, y_c - 1), width, height)][0] as f64;
+    let size = 5;
+    let delta_s = size;
+    let delta_0 = 0;
+
+    let i1: f64 = image[get_pixel_coord((x_c + delta_s, y_c + delta_0), width, height)][0] as f64;
+    let i2: f64 = image[get_pixel_coord((x_c + delta_s, y_c + delta_s), width, height)][0] as f64;
+    let i3: f64 = image[get_pixel_coord((x_c + delta_0, y_c + delta_s), width, height)][0] as f64;
+    let i4: f64 = image[get_pixel_coord((x_c - delta_s, y_c + delta_s), width, height)][0] as f64;
+    let i5: f64 = image[get_pixel_coord((x_c - delta_s, y_c + delta_0), width, height)][0] as f64;
+    let i6: f64 = image[get_pixel_coord((x_c - delta_s, y_c - delta_s), width, height)][0] as f64;
+    let i7: f64 = image[get_pixel_coord((x_c + delta_0, y_c - delta_s), width, height)][0] as f64;
+    let i8: f64 = image[get_pixel_coord((x_c + delta_s, y_c - delta_s), width, height)][0] as f64;
 
     // Compute differences.
 
@@ -66,6 +70,8 @@ pub fn apply_center_symmetry_filter(
     let d4: f64 = (i2 - i6).abs();
     let d5: f64 = (i4 - i8).abs();
     let d6: f64 = (i2 + i6 - i4 - i8).abs();
+
+    // println!("d1 {} d2 {} d3 {} d4 {} d5 {} d6 {}", d1, d2, d3, d4, d5, d6);
 
     // check if criterion is met
     let is_real_corner =
