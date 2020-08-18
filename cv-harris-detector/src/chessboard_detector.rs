@@ -369,7 +369,9 @@ impl ClosestNeighborDistanceHistogram {
             if window_min <= key && key <= window_max {
                 let value = *value as f64;
                 let key = key as f64;
-                std_dev += value * (key as f64 - mean) * (key as f64 - mean);
+                let distance_to_mean = (key as f64 - mean).abs();
+                println!("mean is {}, key is {}, distance to mean is {}", mean, key, distance_to_mean);
+                std_dev += value * distance_to_mean * distance_to_mean;
             }
         }
 

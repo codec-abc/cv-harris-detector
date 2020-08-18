@@ -8,7 +8,9 @@ use cv_harris_detector::*;
 pub fn main_harris() {
     //let image_path = "./cv-harris-detector/test_images/Harris_Detector_Original_Image.jpg";
     //let image_path = "./cv-harris-detector/test_images/fileListImageUnDist.jpg";
-    let image_path = "./cv-harris-detector/test_images/bouguet/Image1.tif";
+    
+    let image_path = "./cv-harris-detector/test_images/bouguet/Image5.tif";
+    //let image_path = "./cv-harris-detector/test_images/other/CalibIm1.tif";
 
     let src_image = image::open(image_path).expect("failed to open image file");
 
@@ -21,7 +23,7 @@ pub fn main_harris() {
     
     let non_maximum_suppression_radius = 8;
     let window_size_ratio = 0.5f64;// TODO : should be 0.8;
-    let run_histogram_normalization = true;
+    let run_histogram_normalization = false;
     let k: f64 = 0.04f64; // Harris detector free parameter. The higher the value the less it detects.
     //let blur = None; //Some(0.3f32); // TODO: fix this. For very low value the image starts to be completely white
 
@@ -61,13 +63,6 @@ pub fn main_harris() {
             let normed = harris_normed_non_max_suppressed[(x, y)][0];
 
             if normed >= harris_threshold {
-                
-                // drawing::draw_filled_circle_mut(
-                //     &mut canvas, 
-                //     (x as i32 , y as i32),
-                //     1i32,
-                //     Rgb([255, 0, 0]));
-
                 corners.push((x as i32, y as i32));
             }
             
@@ -108,14 +103,14 @@ pub fn main_harris() {
         chessboard_parameters.t = 0.9f64;
     }
 
-     // TODO : find good values for d
-    chessboard_parameters.d = 40f64;
+    // TODO : find good values for d
+    chessboard_parameters.d = chessboard_parameters.d / 1.3f64;
 
     // TODO : find good values for p
     chessboard_parameters.p = 1.2f64;
 
     // println!("p is {}", chessboard_parameters.p);
-    // println!("d is {}", chessboard_parameters.d);
+    println!("d is {}", chessboard_parameters.d);
     // println!("t is {}", chessboard_parameters.t);
 
     let mut wrong_corners_indexes: Vec<usize> = vec!();
@@ -126,12 +121,13 @@ pub fn main_harris() {
 
     while has_eliminated_some_point_this_loop {
 
-        // println!("iteration {} ===============", number_of_iterations);
+        println!("iteration {} ===============", number_of_iterations);
         has_eliminated_some_point_this_loop = false;
 
         for (index, (x, y)) in corners.iter().enumerate()  {
 
             let corner_location = (*x, *y);
+
             //TODO find good value for corner_distance;
             let corner_distance = 5;
 
@@ -144,7 +140,7 @@ pub fn main_harris() {
                 );
 
             if corner_filter == CornerFilterResult::FakeCorner {
-                //println!("we have got a fake corner because of symmetry filter at {} {}", corner_location.0, corner_location.1);
+                println!("we have got a fake corner because of symmetry filter at {} {}", corner_location.0, corner_location.1);
                 wrong_corners_indexes.push(index);
                 has_eliminated_some_point_this_loop = true;
                 continue;
@@ -157,7 +153,7 @@ pub fn main_harris() {
             );
 
             if corner_filter == CornerFilterResult::FakeCorner {
-                //println!("we have got a fake corner because of neighbor distance filter at {} {}", corner_location.0, corner_location.1);
+                println!("we have got a fake corner because of neighbor distance filter at {} {}", corner_location.0, corner_location.1);
                 wrong_corners_indexes.push(index);
                 has_eliminated_some_point_this_loop = true;
                 continue;
@@ -170,9 +166,10 @@ pub fn main_harris() {
             );
 
             if corner_filter == CornerFilterResult::FakeCorner {
-                //println!("we have got a fake corner because of angle criterion at {} {}", corner_location.0, corner_location.1);
+                println!("we have got a fake corner because of angle criterion at {} {}", corner_location.0, corner_location.1);
                 wrong_corners_indexes.push(index);
                 has_eliminated_some_point_this_loop = true;
+                continue;
             }
         }
 
