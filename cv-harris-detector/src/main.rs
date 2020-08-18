@@ -104,7 +104,12 @@ pub fn main_harris() {
 
     println!("a_min is {}, a_max is {}", a_min, a_max);
 
-    let chessboard_parameters = compute_adaptive_parameters(a_min, a_max);
+    let mut chessboard_parameters = compute_adaptive_parameters(a_min, a_max);
+
+    // TODO : clamp t to < -1
+    if chessboard_parameters.t >= 1.0f64 {
+        chessboard_parameters.t = 0.9f64;
+    }
 
     println!("p is {}", chessboard_parameters.p);
     println!("d is {}", chessboard_parameters.d);
@@ -112,41 +117,88 @@ pub fn main_harris() {
 
     let mut wrong_corners_indexes: Vec<usize> = vec!();
 
-    for (index, (x, y)) in corners.iter().enumerate()  {
-        let corner_location = (*x, *y); 
+    let mut number_of_iterations = 0;
+    let mut has_eliminated_some_point_this_loop = true;
+    let mut corners_eliminated : Vec<(i32, i32)> = Vec::new();
 
-        // let corner_filter = 
-        //     apply_center_symmetry_filter(
-        //         chessboard_parameters.p,
-        //         &harris_normed_non_max_suppressed,
-        //         corner_location
-        //     );
+    while has_eliminated_some_point_this_loop {
 
-        let corner_filter = apply_neighbor_distance_filter(
-            chessboard_parameters.d,
-            &corners,
-            index,
-        );
+        println!("iteration {} ===============", number_of_iterations);
+        has_eliminated_some_point_this_loop = false;
 
-        // let corner_filter = apply_neighbor_angle_filter(
-        //     chessboard_parameters.t,
-        //     &corners,
-        //     index,
-        // );
+        for (index, (x, y)) in corners.iter().enumerate()  {
 
-        if corner_filter == CornerFilterResult::FakeCorner {
-            println!("we have got a fake corner");
-            wrong_corners_indexes.push(index);
+            // if wrong_corners_indexes_total.contains(&index) {
+            //     continue;
+            // }
+
+            let corner_location = (*x, *y); 
+
+            // let corner_filter = 
+            //     apply_center_symmetry_filter(
+            //         chessboard_parameters.p,
+            //         &harris_normed_non_max_suppressed,
+            //         corner_location
+            //     );
+
+            let corner_filter = apply_neighbor_distance_filter(
+                chessboard_parameters.d,
+                &corners,
+                index,
+            );
+
+            if corner_filter == CornerFilterResult::FakeCorner {
+                println!("we have got a fake corner because of neighbor distance filter at {} {}", corner_location.0, corner_location.1);
+                wrong_corners_indexes.push(index);
+                has_eliminated_some_point_this_loop = true;
+                continue;
+            }
+
+            let corner_filter = apply_neighbor_angle_filter(
+                chessboard_parameters.t,
+                &corners,
+                index,
+            );
+
+            if corner_filter == CornerFilterResult::FakeCorner {
+                println!("we have got a fake corner because of angle criterion at {} {}", corner_location.0, corner_location.1);
+                wrong_corners_indexes.push(index);
+                has_eliminated_some_point_this_loop = true;
+            }
+            
         }
-        
+
+        wrong_corners_indexes.sort();
+        wrong_corners_indexes.dedup();
+        wrong_corners_indexes.reverse();
+
+        println!("corners.len() {}", corners.len());
+        println!("wrong_corners_indexes.len() {}", wrong_corners_indexes.len());
+
+        for index_to_remove in &wrong_corners_indexes {
+            let corner = corners[*index_to_remove];
+            corners_eliminated.push(corner);
+        }
+
+        for index_to_remove in &wrong_corners_indexes {
+            corners.remove(*index_to_remove);
+        }
+
+        wrong_corners_indexes.clear();
+
+        number_of_iterations += 1;
     }
+
+    println!("we eliminated corners for {} round(s)", number_of_iterations);
     
-    for (index, (x, y)) in corners.iter().enumerate()  {
-        let is_fake_corner = wrong_corners_indexes.contains(&index);
+    //for (index, (x, y)) in corners_eliminated  {
+    for (x, y) in corners_eliminated  {
+        let is_fake_corner = true;// wrong_corners_indexes_total.contains(&index);
         if is_fake_corner { 
+            println!("location is {} {}", x, y);
             drawing::draw_filled_circle_mut(
                 &mut canvas, 
-                (*x as i32 , *y as i32),
+                (x as i32 , y as i32),
                 1i32,
                 Rgb([255, 0, 0]));
         }

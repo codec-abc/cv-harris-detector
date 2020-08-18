@@ -42,6 +42,7 @@ pub fn apply_center_symmetry_filter(
     let width = image.width();
     let height = image.height();
 
+    // TODO: use bigger window than a 3x3 window
     // Get all 8 pixels intensity around the current corner
 
     // | i4 | i3 | i2 | 
@@ -177,9 +178,14 @@ pub fn apply_neighbor_angle_filter(
 
     let cos_theta = (a.0 * b.0 + a.1 * b.1) / (norm(a) * norm(b));
 
+    let theta = cos_theta.acos().to_degrees();
+
     if cos_theta < t_cosine_threshold {
         CornerFilterResult::RealCorner
     } else {
+        // println!("t_cosine_threshold is {}", t_cosine_threshold);
+        // println!("threshold is {}", t_cosine_threshold.acos().to_degrees());
+        // println!("theta is {}", theta);
         CornerFilterResult::FakeCorner
     }
 }
