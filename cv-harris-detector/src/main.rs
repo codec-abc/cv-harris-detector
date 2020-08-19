@@ -5,6 +5,13 @@ use cv_harris_detector::*;
 
 // Run with cargo run --bin cv-harris-detector
 
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+enum EliminationCause {
+    Symmetry,
+    Distance,
+    Angle,
+}
+
 pub fn main_harris() {
     //let image_path = "./cv-harris-detector/test_images/Harris_Detector_Original_Image.jpg";
     //let image_path = "./cv-harris-detector/test_images/fileListImageUnDist.jpg";
@@ -21,7 +28,7 @@ pub fn main_harris() {
     let display_over_original_image = true;
     let harris_threshold = 20;
     
-    let non_maximum_suppression_radius = 8;
+    let non_maximum_suppression_radius = 6;
     let window_size_ratio = 0.5f64;// TODO : should be 0.8;
     let run_histogram_normalization = false;
     let k: f64 = 0.04f64; // Harris detector free parameter. The higher the value the less it detects.
@@ -113,11 +120,11 @@ pub fn main_harris() {
     println!("d is {}", chessboard_parameters.d);
     // println!("t is {}", chessboard_parameters.t);
 
-    let mut wrong_corners_indexes: Vec<usize> = vec!();
+    let mut wrong_corners_indexes: Vec<(usize, EliminationCause)> = vec!();
 
     let mut number_of_iterations = 0;
     let mut has_eliminated_some_point_this_loop = true;
-    let mut corners_eliminated : Vec<(i32, i32)> = Vec::new();
+    let mut corners_eliminated : Vec<(i32, i32, EliminationCause)> = Vec::new();
 
     while has_eliminated_some_point_this_loop {
 
@@ -141,7 +148,7 @@ pub fn main_harris() {
 
             if corner_filter == CornerFilterResult::FakeCorner {
                 println!("we have got a fake corner because of symmetry filter at {} {}", corner_location.0, corner_location.1);
-                wrong_corners_indexes.push(index);
+                wrong_corners_indexes.push((index, EliminationCause::Symmetry));
                 has_eliminated_some_point_this_loop = true;
                 continue;
             }
@@ -154,7 +161,7 @@ pub fn main_harris() {
 
             if corner_filter == CornerFilterResult::FakeCorner {
                 println!("we have got a fake corner because of neighbor distance filter at {} {}", corner_location.0, corner_location.1);
-                wrong_corners_indexes.push(index);
+                wrong_corners_indexes.push((index, EliminationCause::Distance));
                 has_eliminated_some_point_this_loop = true;
                 continue;
             }
@@ -167,25 +174,25 @@ pub fn main_harris() {
 
             if corner_filter == CornerFilterResult::FakeCorner {
                 println!("we have got a fake corner because of angle criterion at {} {}", corner_location.0, corner_location.1);
-                wrong_corners_indexes.push(index);
+                wrong_corners_indexes.push((index, EliminationCause::Angle));
                 has_eliminated_some_point_this_loop = true;
                 continue;
             }
         }
 
-        wrong_corners_indexes.sort();
-        wrong_corners_indexes.dedup();
+        //wrong_corners_indexes.sort();
+        //wrong_corners_indexes.dedup();
         wrong_corners_indexes.reverse();
 
         // println!("corners.len() {}", corners.len());
         // println!("wrong_corners_indexes.len() {}", wrong_corners_indexes.len());
 
-        for index_to_remove in &wrong_corners_indexes {
+        for (index_to_remove, elimination_cause) in &wrong_corners_indexes {
             let corner = corners[*index_to_remove];
-            corners_eliminated.push(corner);
+            corners_eliminated.push((corner.0, corner.1, *elimination_cause));
         }
 
-        for index_to_remove in &wrong_corners_indexes {
+        for (index_to_remove, elimination_cause) in &wrong_corners_indexes {
             corners.remove(*index_to_remove);
         }
 
@@ -199,12 +206,18 @@ pub fn main_harris() {
     let draw_eliminated = false;
     
     if draw_eliminated {
-        for (x, y) in corners_eliminated  {
+        for (x, y, elimination_cause) in corners_eliminated  {
+            let color = match elimination_cause {
+                EliminationCause::Distance => Rgb([255, 0, 0]),
+                EliminationCause::Symmetry => Rgb([0, 255, 0]),
+                EliminationCause::Angle => Rgb([0, 0, 255]),
+            };
+
             drawing::draw_filled_circle_mut(
                 &mut canvas, 
                 (x as i32 , y as i32),
                 1i32,
-                Rgb([255, 0, 0]));
+                color);
         }
     } else {
 

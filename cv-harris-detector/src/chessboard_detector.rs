@@ -3,6 +3,8 @@
 // http://ir.hfcas.ac.cn:8080/bitstream/334002/31604/1/Automatic%20chessboard%20corner%20detection%20method.pdf
 // https://web.stanford.edu/class/cs231a/prev_projects_2015/chess.pdf
 // https://www.isprs.org/proceedings/XXXVII/congress/5_pdf/04.pdf
+// https://web.stanford.edu/class/ee368/Project_Autumn_1516/Reports/Dekelaita.pdf
+// http://rcv.kaist.ac.kr/?module=file&act=procFileDownload&file_srl=5272&sid=1a773ef2a2684da674c6825044658f27&module_srl=4502
 
 use image::{ImageBuffer, Luma};
 use std::collections::HashMap;
