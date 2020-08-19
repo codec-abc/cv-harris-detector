@@ -28,7 +28,7 @@ pub fn main_harris() {
     let display_over_original_image = true;
     let harris_threshold = 20;
     
-    let non_maximum_suppression_radius = 6;
+    let non_maximum_suppression_radius = 5.0f64;
     let window_size_ratio = 0.5f64;// TODO : should be 0.8;
     let run_histogram_normalization = false;
     let k: f64 = 0.04f64; // Harris detector free parameter. The higher the value the less it detects.

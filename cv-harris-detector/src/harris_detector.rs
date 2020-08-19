@@ -55,7 +55,7 @@ impl HarrisDetectorResult {
 
     pub fn run_non_maximum_suppression(
         &self,
-        non_maximum_suppression_radius: u32,
+        non_maximum_suppression_distance: f64,
         harris_threshold: u8
     ) -> ImageBuffer<Luma<u8>, Vec<u8>> {
         let mut harris_normalized = DynamicImage::ImageRgb8(self.min_max_normalized_harris()).to_luma();
@@ -68,7 +68,7 @@ impl HarrisDetectorResult {
                 let pixel_coord = (x as u32, y as u32);
                 let value = harris_normalized[pixel_coord][0];
 
-                let non_maximum_suppression_radius = non_maximum_suppression_radius as i32 + 1;
+                let non_maximum_suppression_radius = non_maximum_suppression_distance as i32 + 1;
                 
                 // if value is below threshold we set it to 0 and continue
                 if value < harris_threshold {
@@ -79,6 +79,12 @@ impl HarrisDetectorResult {
                 for i in (-non_maximum_suppression_radius + 1)..non_maximum_suppression_radius {
                     for j in (-non_maximum_suppression_radius + 1)..non_maximum_suppression_radius {
                         if i == 0 && j == 0 {
+                            continue;
+                        }
+
+                        let distance = ((i * i + j * j) as f64).sqrt();
+
+                        if distance > non_maximum_suppression_distance {
                             continue;
                         }
 
