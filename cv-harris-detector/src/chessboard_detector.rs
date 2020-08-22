@@ -5,6 +5,7 @@
 // https://www.isprs.org/proceedings/XXXVII/congress/5_pdf/04.pdf
 // https://web.stanford.edu/class/ee368/Project_Autumn_1516/Reports/Dekelaita.pdf
 // http://rcv.kaist.ac.kr/?module=file&act=procFileDownload&file_srl=5272&sid=1a773ef2a2684da674c6825044658f27&module_srl=4502
+// https://github.com/opencv/opencv/blob/72c5ac37deaf59f73c918449a0f90e49f7866034/modules/calib3d/src/chessboard.cpp#L3634
 
 use image::{ImageBuffer, Luma};
 use std::collections::HashMap;
