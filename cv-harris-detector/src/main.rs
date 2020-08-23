@@ -19,6 +19,8 @@ pub fn main_harris() {
     let image_path = "./cv-harris-detector/test_images/bouguet/Image5.tif";
     //let image_path = "./cv-harris-detector/test_images/other/CalibIm1.tif";
 
+    let image_path = "./cv-harris-detector/test_images/stereopi-tutorial/left_01.png";
+
     let src_image = image::open(image_path).expect("failed to open image file");
 
     // Probably not the right kind of conversion
@@ -26,7 +28,7 @@ pub fn main_harris() {
     // and https://docs.rs/image/0.23.8/src/image/color.rs.html#415
 
     let display_over_original_image = true;
-    let harris_threshold = 20;
+    let harris_threshold = 90;
     
     let non_maximum_suppression_radius = 5.0f64;
     let window_size_ratio = 0.5f64;// TODO : should be 0.8;
