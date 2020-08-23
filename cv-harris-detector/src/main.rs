@@ -28,7 +28,7 @@ pub fn main_harris() {
     // and https://docs.rs/image/0.23.8/src/image/color.rs.html#415
 
     let display_over_original_image = true;
-    let harris_threshold = 90;
+    let harris_threshold = 70;
     
     let non_maximum_suppression_radius = 5.0f64;
     let window_size_ratio = 0.5f64;// TODO : should be 0.8;
@@ -203,7 +203,7 @@ pub fn main_harris() {
         number_of_iterations += 1;
     }
 
-    // println!("we eliminated corners for {} round(s)", number_of_iterations);
+    println!("we have eliminated  {} corners in {} round(s)", corners_eliminated.len(), number_of_iterations);
 
     let draw_eliminated = false;
     
