@@ -1,7 +1,7 @@
 
 // https://www.isprs.org/proceedings/XXXVII/congress/5_pdf/04.pdf
 
-use image::{DynamicImage, Rgb, imageops::FilterType, ImageBuffer};
+use image::{DynamicImage, Rgb, Luma, imageops::FilterType, ImageBuffer};
 use imageproc::{drawing, filter};
 
 pub struct CornersMeanAndMedium {
@@ -50,20 +50,122 @@ pub fn find_corners_mean_and_medium(
 pub fn run_chessboard_detection(
     possible_corners: &Vec<(i32, i32)>,
     corners_centers: &CornersMeanAndMedium,
+    gray_image: &ImageBuffer<Luma<u8>, Vec<u8>>,
     canvas: &mut drawing::Blend<ImageBuffer<Rgb<u8>, Vec<u8>>>,
 
     //starting_point_coordinates: (i32, i32),
     //index_for_starting_point: i32
 
 ) {
-    let starting_point_coordinates = corners_centers.medium;
-    let mut distances_to_starting_point = vec!();
-    let index_for_starting_point = 0;
+    
+    let starting_point_coordinates = corners_centers.mean; // TODO : use mean or medium
 
-    let starting_point = (starting_point_coordinates.0 as f64, starting_point_coordinates.1 as f64);
-    for (current_x, current_y) in possible_corners {
-        let current_corner = (*current_x as f64, *current_y as f64);
-        let distance = distance(current_corner, starting_point);
+    let mut distances_to_starting_point = 
+        distance_to_points(starting_point_coordinates, possible_corners);
+
+    {
+        let index_for_starting_point = 0usize;
+        let starting_point = distances_to_starting_point[index_for_starting_point].1;
+        distances_to_starting_point.remove(index_for_starting_point);
+
+        let other_points = 
+            distances_to_starting_point
+            .into_iter()
+            .map(|(_dist, point)| point)
+            .collect::<Vec<(i32, i32)>>();
+
+        run_try(starting_point, &other_points, gray_image, canvas);
+    }
+}
+
+fn run_try(
+    starting_point: (i32, i32),
+    other_possibles_corners: &Vec<(i32, i32)>,
+    gray_image: &ImageBuffer<Luma<u8>, Vec<u8>>,
+    canvas: &mut drawing::Blend<ImageBuffer<Rgb<u8>, Vec<u8>>>
+) {
+
+    let other_points_and_distances_to_starting_point = 
+        distance_to_points(starting_point, other_possibles_corners);
+
+    assert!(other_possibles_corners.len() >= 7);
+
+    for i in 0..7 {
+    //for i in 0..1 {
+        let (_dist, point) = other_points_and_distances_to_starting_point[i];
+        let dir = diff(point, starting_point);
+        let dir_length = norm(dir);
+        let new_length = 0.4f64 * dir_length;
+        let scaled_dir = (dir.0 as f64 * new_length / dir_length, dir.1 as f64 * new_length / dir_length);
+
+        let perpendicular_dir = (scaled_dir.1, -scaled_dir.0);
+
+        let grey_value_1_coord_coord_f64 = (scaled_dir.0 + perpendicular_dir.0, scaled_dir.1 + perpendicular_dir.1);
+        let grey_value_2_coord_coord_f64 = (scaled_dir.0 - perpendicular_dir.0, scaled_dir.1 - perpendicular_dir.1);
+
+        let grey_value_1_coord = (starting_point.0 + grey_value_1_coord_coord_f64.0 as i32, starting_point.1 + grey_value_1_coord_coord_f64.1 as i32);
+        let grey_value_2_coord = (starting_point.0 + grey_value_2_coord_coord_f64.0 as i32, starting_point.1 + grey_value_2_coord_coord_f64.1 as i32);
+
+        // TODO : check coordinates are on screen
+
+        let grey_value_1 = gray_image[(grey_value_1_coord.0 as u32, grey_value_1_coord.1 as u32)][0];
+        let grey_value_2 = gray_image[(grey_value_2_coord.0 as u32, grey_value_2_coord.1 as u32)][0];
+
+        let diff = (grey_value_1 as i16 - grey_value_2 as i16).abs();
+
+        // TODO : fix threshold comparison
+
+        println!("diff is {}", diff);
+
+        if diff >= 100 {
+
+            // drawing::draw_filled_circle_mut(
+            //     canvas, 
+            //     grey_value_1_coord,
+            //     1i32,
+            //     Rgb([0, 255, 0])
+            // );
+
+            // drawing::draw_filled_circle_mut(
+            //     canvas, 
+            //     grey_value_2_coord,
+            //     1i32,
+            //     Rgb([255, 255, 0])
+            // );
+
+            drawing::draw_filled_circle_mut(
+                canvas, 
+                point,
+                1i32,
+                Rgb([0, 255, 0])
+            );
+        }
+
+    }
+
+    // for i in 0..4 {
+    //     let (_dist, point) = other_points_and_distances_to_starting_point[i];
+    //     drawing::draw_filled_circle_mut(
+    //         canvas, 
+    //         (point.0, point.1),
+    //         1i32,
+    //         Rgb([0, 255, 0])
+    //     );
+    // }
+   
+    let out_img = DynamicImage::ImageRgb8(canvas.0.clone());
+    imgshow::imgshow(&out_img);
+}
+
+fn distance_to_points(
+    point: (i32, i32),
+    other_points: &[(i32, i32)],
+) -> Vec<(f64, (i32, i32))> {
+    let mut distances_to_starting_point = vec!();
+
+    for (current_x, current_y) in other_points {
+        let current_corner = (*current_x, *current_y);
+        let distance = distance(current_corner, point);
         distances_to_starting_point.push((distance, current_corner));
     }
 
@@ -74,19 +176,17 @@ pub fn run_chessboard_detection(
         a_distance.partial_cmp(&b_distance).unwrap()
     });
 
-    let real_starting_point = distances_to_starting_point[index_for_starting_point as usize].1;
-
-    drawing::draw_filled_circle_mut(
-        canvas, 
-        (real_starting_point.0 as i32, real_starting_point.1 as i32),
-        1i32,
-        Rgb([0, 255, 0])
-    );
-
-    let out_img = DynamicImage::ImageRgb8(canvas.0.clone());
-    imgshow::imgshow(&out_img);
+    distances_to_starting_point
 }
 
-fn distance((a_x, a_y) : (f64, f64), (b_x, b_y) : (f64, f64)) -> f64 {
-    ((a_x - b_x).powi(2) + (a_y - b_y).powi(2)).sqrt()
+fn distance((a_x, a_y) : (i32, i32), (b_x, b_y) : (i32, i32)) -> f64 {
+    ((a_x as f64 - b_x as f64).powi(2) + (a_y as f64 - b_y as f64).powi(2)).sqrt()
+}
+
+fn diff((a_x, a_y) : (i32, i32), (b_x, b_y) : (i32, i32)) -> (i32, i32) {
+    ((a_x - b_x), (a_y - b_y))
+}
+
+fn norm((a_x, a_y) : (i32, i32)) -> f64 {
+    ((a_x as f64).powi(2) + (a_y as f64).powi(2)).sqrt()
 }

@@ -95,7 +95,7 @@ pub fn main_harris() {
     let harris_image = DynamicImage::ImageLuma8(harris_normed_non_max_suppressed.clone()).to_rgb();
 
     let mut canvas = if display_over_original_image {
-        drawing::Blend(DynamicImage::ImageLuma8(gray_image).to_rgb())
+        drawing::Blend(DynamicImage::ImageLuma8(gray_image.clone()).to_rgb())
     } else {
         drawing::Blend(harris_image)
     };
@@ -137,7 +137,13 @@ pub fn main_harris() {
     // let out_img = DynamicImage::ImageRgb8(canvas.0.clone());
     // imgshow::imgshow(&out_img);
 
-    run_chessboard_detection(&filtering_result.remaining_corners, &corners_centers, &mut canvas);
+    run_chessboard_detection(
+&filtering_result.remaining_corners, 
+        &corners_centers,
+        //&gray_image,
+        &blurred_gray_image,
+        &mut canvas
+    );
 
 }
 
