@@ -215,92 +215,92 @@ fn norm((a_x, a_y) : (f64, f64)) -> f64 {
     (a_x.powi(2) + a_y.powi(2)).sqrt()
 }
 
-pub struct ChessboardCorners {
-    corner_a_index: usize,
-    corner_a_location: CornerLocation,
+// pub struct ChessboardCorners {
+//     corner_a_index: usize,
+//     corner_a_location: CornerLocation,
 
-    corner_b_index: usize,
-    corner_b_location: CornerLocation,
+//     corner_b_index: usize,
+//     corner_b_location: CornerLocation,
 
-    corner_c_index: usize,
-    corner_c_location: CornerLocation,
+//     corner_c_index: usize,
+//     corner_c_location: CornerLocation,
 
-    corner_d_index: usize,
-    corner_d_location: CornerLocation,
-}
+//     corner_d_index: usize,
+//     corner_d_location: CornerLocation,
+// }
 
 // return the index of the corners
-pub fn get_corners(corners: &[CornerLocation]) -> ChessboardCorners {
-    let mut a = std::i64::MAX; // top-left corner
-    let mut b = std::i64::MIN; // top-right corner
-    let mut c = std::i64::MAX; // bottom-left corner
-    let mut d = std::i64::MIN; // bottom-right corner
+// pub fn get_corners(corners: &[CornerLocation]) -> ChessboardCorners {
+//     let mut a = std::i64::MAX; // top-left corner
+//     let mut b = std::i64::MIN; // top-right corner
+//     let mut c = std::i64::MAX; // bottom-left corner
+//     let mut d = std::i64::MIN; // bottom-right corner
 
-    let mut a_index = 0;
-    let mut b_index = 0;
-    let mut c_index = 0;
-    let mut d_index = 0;
+//     let mut a_index = 0;
+//     let mut b_index = 0;
+//     let mut c_index = 0;
+//     let mut d_index = 0;
 
-    // for all corners we sum and compute the diff between x and y.
-    for index in 0..corners.len() {
-        let (current_x, current_y) = corners[index];
+//     // for all corners we sum and compute the diff between x and y.
+//     for index in 0..corners.len() {
+//         let (current_x, current_y) = corners[index];
 
-        let sum = current_x as i64 + current_y as i64 ;
-        let diff = current_x as i64 - current_y as i64 ;
+//         let sum = current_x as i64 + current_y as i64 ;
+//         let diff = current_x as i64 - current_y as i64 ;
 
 
-        if sum < a {
-            a = sum;
-            a_index = index;
-        }
+//         if sum < a {
+//             a = sum;
+//             a_index = index;
+//         }
 
-        if diff > b {
-            b = sum;
-            b_index = index;
-        }
+//         if diff > b {
+//             b = sum;
+//             b_index = index;
+//         }
 
-        if diff < c {
-            c = sum;
-            c_index = index;
-        }
+//         if diff < c {
+//             c = sum;
+//             c_index = index;
+//         }
 
-        if sum > d {
-            d = sum;
-            d_index = index;
-        }
+//         if sum > d {
+//             d = sum;
+//             d_index = index;
+//         }
 
-    }
+//     }
 
-    ChessboardCorners {
-        corner_a_index: a_index,
-        corner_a_location: corners[a_index],
+//     ChessboardCorners {
+//         corner_a_index: a_index,
+//         corner_a_location: corners[a_index],
     
-        corner_b_index: b_index,
-        corner_b_location: corners[b_index],
+//         corner_b_index: b_index,
+//         corner_b_location: corners[b_index],
     
-        corner_c_index: c_index,
-        corner_c_location: corners[c_index],
+//         corner_c_index: c_index,
+//         corner_c_location: corners[c_index],
     
-        corner_d_index: d_index,
-        corner_d_location: corners[d_index]
-    }
-}
+//         corner_d_index: d_index,
+//         corner_d_location: corners[d_index]
+//     }
+// }
 
-pub struct chessboard_detector_parameters {
+pub struct chessboardDetectorParameters {
     pub r: f64,
     pub p: f64,
     pub d: f64,
     pub t: f64,
 }
 
-pub fn compute_adaptive_parameters(a_min: f64, a_max: f64) -> chessboard_detector_parameters {
+pub fn compute_adaptive_parameters(a_min: f64, a_max: f64) -> chessboardDetectorParameters {
 
     let r = 0.7f64 * a_min;
     let p = 0.3f64 * a_max / a_min;
     let d = 2.0f64 * a_max;
     let t = 0.4f64 * a_max / a_min;
 
-    chessboard_detector_parameters { r, p, d, t }
+    chessboardDetectorParameters { r, p, d, t }
 }
 
 pub struct ClosestNeighborDistanceHistogram {
