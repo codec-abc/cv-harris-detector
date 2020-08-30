@@ -5,14 +5,15 @@ use cv_harris_detector::*;
 
 // Run with cargo run --bin cv-harris-detector
 
-fn get_image_path() -> String {
+fn get_image_path_and_chessboard_size() -> (String, (i32, i32)) {
     //let image_path = "./cv-harris-detector/test_images/Harris_Detector_Original_Image.jpg";
     //let image_path = "./cv-harris-detector/test_images/fileListImageUnDist.jpg";
     //let image_path = "./cv-harris-detector/test_images/bouguet/Image5.tif";
     //let image_path = "./cv-harris-detector/test_images/other/CalibIm1.tif";
-    let image_path = "./cv-harris-detector/test_images/stereopi-tutorial/left_01.png";
+    let image_path = "./cv-harris-detector/test_images/stereopi-tutorial/left_01.png"; // 9x6
 
-    image_path.to_owned()
+    let chessboard_size = (9, 6);
+    (image_path.to_owned(), chessboard_size)
 }
 
 fn generate_chessboard_parameters(
@@ -59,7 +60,7 @@ fn generate_chessboard_parameters(
 
 pub fn main_harris() {
 
-    let image_path = get_image_path();
+    let (image_path, chessboard_size) = get_image_path_and_chessboard_size();
     let src_image = image::open(image_path).expect("failed to open image file");
 
     // Probably not the right kind of conversion
@@ -106,8 +107,6 @@ pub fn main_harris() {
     println!("detected {} corners", number_of_corners);
     println!("we should have roughly twice as corners as there is in the pattern");
 
-    // TODO filter corners
-
     let closest_neighbor_distance_histogram = compute_closest_neighbor_distance_histogram(&corners);
     let window_size = closest_neighbor_distance_histogram.window_size_that_cover_x_percent(window_size_ratio); 
     let (mean, std_dev) = closest_neighbor_distance_histogram.mean_val_and_std_dev_for_window(window_size);
@@ -118,10 +117,26 @@ pub fn main_harris() {
     println!("remaining corners {}", filtering_result.remaining_corners.len());
     println!("filtered out corners {}", filtering_result.filtered_out_corners.len());
 
-    let draw_eliminated = false;
+    //let draw_eliminated = false;
     //draw_filtering_result(&mut canvas, draw_eliminated, &filtering_result);
 
-    //try_find_chessboard();
+    let corners_centers = find_corners_mean_and_medium(&filtering_result.remaining_corners);
+
+    drawing::draw_filled_circle_mut(
+        &mut canvas, 
+        corners_centers.mean,
+        1i32,
+        Rgb([255, 0, 0]));
+
+    drawing::draw_filled_circle_mut(
+        &mut canvas, 
+        corners_centers.medium,
+        1i32,
+        Rgb([0, 255, 0]));
+
+    let out_img = DynamicImage::ImageRgb8(canvas.0.clone());
+    imgshow::imgshow(&out_img);
+
 }
 
 
