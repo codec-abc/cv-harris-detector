@@ -4,6 +4,7 @@
 
 use image::{DynamicImage, Rgb, Luma, imageops::FilterType, ImageBuffer};
 use imageproc::{drawing, filter};
+use crate::common::get_pixel_coord;
 
 pub struct CornersMeanAndMedium {
     pub mean: (i32, i32),
@@ -83,6 +84,9 @@ fn run_try(
     canvas: &mut drawing::Blend<ImageBuffer<Rgb<u8>, Vec<u8>>>
 ) {
 
+    let width = gray_image.width();
+    let height = gray_image.height();
+    
     let other_possibles_corners: Vec<(i32, i32)> = 
         corners.clone().into_iter()
         .filter(|e| {
@@ -112,15 +116,13 @@ fn run_try(
         let grey_value_1_coord = (starting_point.0 + grey_value_1_coord_coord_f64.0 as i32, starting_point.1 + grey_value_1_coord_coord_f64.1 as i32);
         let grey_value_2_coord = (starting_point.0 + grey_value_2_coord_coord_f64.0 as i32, starting_point.1 + grey_value_2_coord_coord_f64.1 as i32);
 
-        // TODO : check coordinates are on screen
-
-        let grey_value_1 = gray_image[(grey_value_1_coord.0 as u32, grey_value_1_coord.1 as u32)][0];
-        let grey_value_2 = gray_image[(grey_value_2_coord.0 as u32, grey_value_2_coord.1 as u32)][0];
+        // TODO : what do to with coordinates on screen ?
+        let grey_value_1 = gray_image[get_pixel_coord((grey_value_1_coord.0 as i32, grey_value_1_coord.1 as i32), width, height)][0];
+        let grey_value_2 = gray_image[get_pixel_coord((grey_value_2_coord.0 as i32, grey_value_2_coord.1 as i32), width, height)][0];
 
         let diff = grey_value_1 as i16 - grey_value_2 as i16;
 
         // TODO : fix threshold comparison or use sobel edge transform
-
         if diff.abs() >= 100 {
 
             main_directions.push(dir);
@@ -146,7 +148,6 @@ fn run_try(
                 Rgb([0, 255, 0])
             );
         }
-
     }
 
     match main_directions.len() {
@@ -166,8 +167,7 @@ fn run_try(
             let a = ((starting_point.0 - right_point.0), (starting_point.1 - right_point.1));
             let point_and_angles: Vec<(f64, (i32, i32))> = main_directions.iter().map(|point| {
                 let b = point;
-                // let cos_theta = ((a.0 * b.0 + a.1 * b.1) as f64) / (norm(a) * norm(*b));
-                // let theta = cos_theta.acos().to_degrees();
+
                 let theta = 
                     (a.0 as f64 * b.1 as f64 - a.1 as f64 * b.0 as f64 )
                     .atan2(a.0 as f64 * b.0 as f64 + a.1 as f64 * b.1 as f64)
