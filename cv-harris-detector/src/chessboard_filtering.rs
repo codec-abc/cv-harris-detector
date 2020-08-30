@@ -15,7 +15,8 @@
 // https://github.com/opencv/opencv/blob/72c5ac37deaf59f73c918449a0f90e49f7866034/modules/calib3d/src/calibinit.cpp#L2000
 // https://github.com/opencv/opencv/blob/72c5ac37deaf59f73c918449a0f90e49f7866034/modules/calib3d/src/calibinit.cpp#L742
 
-use image::{ImageBuffer, Luma};
+use image::{ImageBuffer, Luma, DynamicImage, Rgb, imageops::FilterType};
+use imageproc::{drawing, filter};
 use std::collections::HashMap;
 
 use crate::common::get_pixel_coord;
@@ -286,21 +287,21 @@ fn norm((a_x, a_y) : (f64, f64)) -> f64 {
 //     }
 // }
 
-pub struct chessboardDetectorParameters {
+pub struct ChessboardDetectorParameters {
     pub r: f64,
     pub p: f64,
     pub d: f64,
     pub t: f64,
 }
 
-pub fn compute_adaptive_parameters(a_min: f64, a_max: f64) -> chessboardDetectorParameters {
+pub fn compute_adaptive_parameters(a_min: f64, a_max: f64) -> ChessboardDetectorParameters {
 
     let r = 0.7f64 * a_min;
     let p = 0.3f64 * a_max / a_min;
     let d = 2.0f64 * a_max;
     let t = 0.4f64 * a_max / a_min;
 
-    chessboardDetectorParameters { r, p, d, t }
+    ChessboardDetectorParameters { r, p, d, t }
 }
 
 pub struct ClosestNeighborDistanceHistogram {
@@ -450,4 +451,140 @@ pub fn compute_closest_neighbor_distance_histogram(corners: &[CornerLocation]) -
         number_of_values: sum,
         peak_index: peak_index,
     }
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum EliminationCause {
+    Symmetry,
+    Distance,
+    Angle,
+}
+
+pub struct FilteringResult {
+    pub remaining_corners: Vec<(i32, i32)>,
+    pub filtered_out_corners: Vec<(i32, i32, EliminationCause)>,
+}
+
+pub fn filter_out_corners(
+    chessboard_parameters: &ChessboardDetectorParameters, 
+    corners: &Vec<(i32, i32)>, 
+    blurred_gray_image: &ImageBuffer<Luma<u8>, Vec<u8>>,
+) -> FilteringResult {
+    let mut output_corners = corners.clone();
+    let mut number_of_iterations = 0;
+    let mut has_eliminated_at_least_a_point_this_loop_iteration = true;
+    
+    let mut wrong_corners_indexes: Vec<(usize, EliminationCause)> = vec!();
+    let mut corners_eliminated : Vec<(i32, i32, EliminationCause)> = Vec::new();
+
+    while has_eliminated_at_least_a_point_this_loop_iteration {
+
+        println!("iteration {} ===============", number_of_iterations);
+        has_eliminated_at_least_a_point_this_loop_iteration = false;
+
+        for (index, (x, y)) in output_corners.iter().enumerate()  {
+
+            let corner_location = (*x, *y);
+
+            //TODO find good value for corner_distance;
+            let corner_distance = 5;
+
+            let corner_filter = 
+                apply_center_symmetry_filter(
+                    chessboard_parameters.p,
+                    corner_distance,
+                    &blurred_gray_image,
+                    corner_location
+                );
+
+            if corner_filter == CornerFilterResult::FakeCorner {
+                println!("we have got a fake corner because of symmetry filter at {} {}", corner_location.0, corner_location.1);
+                wrong_corners_indexes.push((index, EliminationCause::Symmetry));
+                has_eliminated_at_least_a_point_this_loop_iteration = true;
+                continue;
+            }
+
+            let corner_filter = apply_neighbor_distance_filter(
+                chessboard_parameters.d,
+                &output_corners,
+                index,
+            );
+
+            if corner_filter == CornerFilterResult::FakeCorner {
+                println!("we have got a fake corner because of neighbor distance filter at {} {}", corner_location.0, corner_location.1);
+                wrong_corners_indexes.push((index, EliminationCause::Distance));
+                has_eliminated_at_least_a_point_this_loop_iteration = true;
+                continue;
+            }
+
+            let corner_filter = apply_neighbor_angle_filter(
+                chessboard_parameters.t,
+                &output_corners,
+                index,
+            );
+
+            if corner_filter == CornerFilterResult::FakeCorner {
+                println!("we have got a fake corner because of angle criterion at {} {}", corner_location.0, corner_location.1);
+                wrong_corners_indexes.push((index, EliminationCause::Angle));
+                has_eliminated_at_least_a_point_this_loop_iteration = true;
+                continue;
+            }
+        }
+
+        wrong_corners_indexes.reverse();
+
+        for (index_to_remove, elimination_cause) in &wrong_corners_indexes {
+            let corner = corners[*index_to_remove];
+            corners_eliminated.push((corner.0, corner.1, *elimination_cause));
+        }
+
+        for (index_to_remove, elimination_cause) in &wrong_corners_indexes {
+            output_corners.remove(*index_to_remove);
+        }
+
+        wrong_corners_indexes.clear();
+
+        number_of_iterations += 1;
+    }
+
+    println!("we have eliminated  {} corners in {} round(s)", corners_eliminated.len(), number_of_iterations);
+
+    FilteringResult {
+        remaining_corners: output_corners,
+        filtered_out_corners: corners_eliminated
+    }
+}
+
+pub fn draw_filtering_result(
+    canvas: &mut drawing::Blend<ImageBuffer<Rgb<u8>, Vec<u8>>>,
+    draw_eliminated: bool,
+    filtering_result: &FilteringResult
+) {
+    if draw_eliminated {
+        for (x, y, elimination_cause) in &filtering_result.filtered_out_corners  {
+            let color = match elimination_cause {
+                EliminationCause::Distance => Rgb([255, 0, 0]),
+                EliminationCause::Symmetry => Rgb([0, 255, 0]),
+                EliminationCause::Angle => Rgb([0, 0, 255]),
+            };
+
+            drawing::draw_filled_circle_mut(
+                canvas, 
+                (*x as i32 , *y as i32),
+                1i32,
+                color);
+        }
+    } else {
+
+        for (x, y) in &filtering_result.remaining_corners  {
+            drawing::draw_filled_circle_mut(
+                canvas, 
+                (*x as i32 , *y as i32),
+                1i32,
+                Rgb([255, 0, 0]));
+        }
+    }
+
+    let out_img = DynamicImage::ImageRgb8(canvas.0.clone());
+    imgshow::imgshow(&out_img);
 }

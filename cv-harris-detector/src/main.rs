@@ -5,12 +5,6 @@ use cv_harris_detector::*;
 
 // Run with cargo run --bin cv-harris-detector
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
-enum EliminationCause {
-    Symmetry,
-    Distance,
-    Angle,
-}
 
 pub fn main_harris() {
     //let image_path = "./cv-harris-detector/test_images/Harris_Detector_Original_Image.jpg";
@@ -42,6 +36,7 @@ pub fn main_harris() {
 
     let blurred_gray_image = filter::gaussian_blur_f32(&gray_image, 2.0f32);
 
+    // TODO : do local normalization instead of the whole image to cope with contrast differences
     let gray_image = if run_histogram_normalization {
         let old_gray_image = gray_image;
         imageproc::contrast::equalize_histogram(&old_gray_image)
@@ -118,122 +113,18 @@ pub fn main_harris() {
     // TODO : find good values for p
     chessboard_parameters.p = 1.2f64;
 
-    // println!("p is {}", chessboard_parameters.p);
+    println!("p is {}", chessboard_parameters.p);
     println!("d is {}", chessboard_parameters.d);
-    // println!("t is {}", chessboard_parameters.t);
+    println!("t is {}", chessboard_parameters.t);
 
-    let mut wrong_corners_indexes: Vec<(usize, EliminationCause)> = vec!();
-
-    let mut number_of_iterations = 0;
-    let mut has_eliminated_some_point_this_loop = true;
-    let mut corners_eliminated : Vec<(i32, i32, EliminationCause)> = Vec::new();
-
-    while has_eliminated_some_point_this_loop {
-
-        println!("iteration {} ===============", number_of_iterations);
-        has_eliminated_some_point_this_loop = false;
-
-        for (index, (x, y)) in corners.iter().enumerate()  {
-
-            let corner_location = (*x, *y);
-
-            //TODO find good value for corner_distance;
-            let corner_distance = 5;
-
-            let corner_filter = 
-                apply_center_symmetry_filter(
-                    chessboard_parameters.p,
-                    corner_distance,
-                    &blurred_gray_image,
-                    corner_location
-                );
-
-            if corner_filter == CornerFilterResult::FakeCorner {
-                println!("we have got a fake corner because of symmetry filter at {} {}", corner_location.0, corner_location.1);
-                wrong_corners_indexes.push((index, EliminationCause::Symmetry));
-                has_eliminated_some_point_this_loop = true;
-                continue;
-            }
-
-            let corner_filter = apply_neighbor_distance_filter(
-                chessboard_parameters.d,
-                &corners,
-                index,
-            );
-
-            if corner_filter == CornerFilterResult::FakeCorner {
-                println!("we have got a fake corner because of neighbor distance filter at {} {}", corner_location.0, corner_location.1);
-                wrong_corners_indexes.push((index, EliminationCause::Distance));
-                has_eliminated_some_point_this_loop = true;
-                continue;
-            }
-
-            let corner_filter = apply_neighbor_angle_filter(
-                chessboard_parameters.t,
-                &corners,
-                index,
-            );
-
-            if corner_filter == CornerFilterResult::FakeCorner {
-                println!("we have got a fake corner because of angle criterion at {} {}", corner_location.0, corner_location.1);
-                wrong_corners_indexes.push((index, EliminationCause::Angle));
-                has_eliminated_some_point_this_loop = true;
-                continue;
-            }
-        }
-
-        //wrong_corners_indexes.sort();
-        //wrong_corners_indexes.dedup();
-        wrong_corners_indexes.reverse();
-
-        // println!("corners.len() {}", corners.len());
-        // println!("wrong_corners_indexes.len() {}", wrong_corners_indexes.len());
-
-        for (index_to_remove, elimination_cause) in &wrong_corners_indexes {
-            let corner = corners[*index_to_remove];
-            corners_eliminated.push((corner.0, corner.1, *elimination_cause));
-        }
-
-        for (index_to_remove, elimination_cause) in &wrong_corners_indexes {
-            corners.remove(*index_to_remove);
-        }
-
-        wrong_corners_indexes.clear();
-
-        number_of_iterations += 1;
-    }
-
-    println!("we have eliminated  {} corners in {} round(s)", corners_eliminated.len(), number_of_iterations);
-
+    let filtering_result = filter_out_corners(&chessboard_parameters, &corners, &blurred_gray_image);
     let draw_eliminated = false;
+
+    println!("remaining corners {}", filtering_result.remaining_corners.len());
+    println!("filtered out corners {}", filtering_result.filtered_out_corners.len());
+
     
-    if draw_eliminated {
-        for (x, y, elimination_cause) in corners_eliminated  {
-            let color = match elimination_cause {
-                EliminationCause::Distance => Rgb([255, 0, 0]),
-                EliminationCause::Symmetry => Rgb([0, 255, 0]),
-                EliminationCause::Angle => Rgb([0, 0, 255]),
-            };
-
-            drawing::draw_filled_circle_mut(
-                &mut canvas, 
-                (x as i32 , y as i32),
-                1i32,
-                color);
-        }
-    } else {
-
-        for (x, y) in corners  {
-            drawing::draw_filled_circle_mut(
-                &mut canvas, 
-                (x as i32 , y as i32),
-                1i32,
-                Rgb([255, 0, 0]));
-        }
-    }
-
-    let out_img = DynamicImage::ImageRgb8(canvas.0);
-    imgshow::imgshow(&out_img);
+    draw_filtering_result(&mut canvas, draw_eliminated, &filtering_result);
 }
 
 
