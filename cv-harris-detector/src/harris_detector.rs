@@ -197,6 +197,25 @@ pub fn harris_corner(
         width: width,
         height: height,
     }
-    
+}
+
+pub fn get_harris_corner_based_on_threshold(
+    harris_normed_non_max_suppressed: &ImageBuffer<Luma<u8>, Vec<u8>>,
+    harris_threshold: u8
+) -> Vec<(i32, i32)> {
+    let mut corners = Vec::new();
+    let width = harris_normed_non_max_suppressed.width();
+    let height = harris_normed_non_max_suppressed.height();
+    for x in 0..width {
+        for y in 0..height {
+            let normed = harris_normed_non_max_suppressed[(x, y)][0];
+
+            if normed >= harris_threshold {
+                corners.push((x as i32, y as i32));
+            }
+        }
+    }
+
+    corners
 }
 

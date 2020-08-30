@@ -28,7 +28,6 @@ pub fn main_harris() {
     let window_size_ratio = 0.5f64;// TODO : should be 0.8;
     let run_histogram_normalization = false;
     let k: f64 = 0.04f64; // Harris detector free parameter. The higher the value the less it detects.
-    //let blur = None; //Some(0.3f32); // TODO: fix this. For very low value the image starts to be completely white
 
     let gray_image = src_image.to_luma();
     let width = gray_image.width();
@@ -60,18 +59,7 @@ pub fn main_harris() {
         drawing::Blend(harris_image)
     };
 
-    let mut corners = Vec::new();
-    
-    for x in 0..width {
-        for y in 0..height {
-            let normed = harris_normed_non_max_suppressed[(x, y)][0];
-
-            if normed >= harris_threshold {
-                corners.push((x as i32, y as i32));
-            }
-            
-        }
-    }
+    let corners = get_harris_corner_based_on_threshold(&harris_normed_non_max_suppressed, harris_threshold);
 
     let number_of_corners = corners.len();
 
