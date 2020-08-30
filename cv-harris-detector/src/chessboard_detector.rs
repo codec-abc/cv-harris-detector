@@ -1,7 +1,6 @@
-
+// https://pdfs.semanticscholar.org/0d33/65f9ff573ee03776f042f938f0d447945ccd.pdf
 // https://www.isprs.org/proceedings/XXXVII/congress/5_pdf/04.pdf
 // https://www.researchgate.net/publication/228345254_Automatic_calibration_of_digital_cameras_using_planar_chess-board_patterns/link/0fcfd5134c9811b4b7000000/download
-// https://pdfs.semanticscholar.org/0d33/65f9ff573ee03776f042f938f0d447945ccd.pdf
 
 use image::{DynamicImage, Rgb, Luma, imageops::FilterType, ImageBuffer};
 use imageproc::{drawing, filter};
@@ -54,10 +53,6 @@ pub fn run_chessboard_detection(
     corners_centers: &CornersMeanAndMedium,
     gray_image: &ImageBuffer<Luma<u8>, Vec<u8>>,
     canvas: &mut drawing::Blend<ImageBuffer<Rgb<u8>, Vec<u8>>>,
-
-    //starting_point_coordinates: (i32, i32),
-    //index_for_starting_point: i32
-
 ) {
     
     let starting_point_coordinates = corners_centers.mean; // TODO : use mean or medium
@@ -68,27 +63,35 @@ pub fn run_chessboard_detection(
     {
         let index_for_starting_point = 0usize;
         let starting_point = distances_to_starting_point[index_for_starting_point].1;
-        distances_to_starting_point.remove(index_for_starting_point);
 
-        let other_points = 
-            distances_to_starting_point
-            .into_iter()
-            .map(|(_dist, point)| point)
-            .collect::<Vec<(i32, i32)>>();
+        //distances_to_starting_point.remove(index_for_starting_point);
 
-        run_try(starting_point, &other_points, gray_image, canvas);
+        // let other_points = 
+        //     distances_to_starting_point
+        //     .into_iter()
+        //     .map(|(_dist, point)| point)
+        //     .collect::<Vec<(i32, i32)>>();
+
+        run_try(starting_point, &possible_corners, gray_image, canvas);
     }
 }
 
 fn run_try(
     starting_point: (i32, i32),
-    other_possibles_corners: &Vec<(i32, i32)>,
+    corners: &Vec<(i32, i32)>,
     gray_image: &ImageBuffer<Luma<u8>, Vec<u8>>,
     canvas: &mut drawing::Blend<ImageBuffer<Rgb<u8>, Vec<u8>>>
 ) {
 
+    let other_possibles_corners: Vec<(i32, i32)> = 
+        corners.clone().into_iter()
+        .filter(|e| {
+            !(e.0 == starting_point.0 && e.1 == starting_point.1)
+        })
+        .collect();
+
     let other_points_and_distances_to_starting_point = 
-        distance_to_points(starting_point, other_possibles_corners);
+        distance_to_points(starting_point, &other_possibles_corners);
 
     assert!(other_possibles_corners.len() >= 7);
 
@@ -116,7 +119,7 @@ fn run_try(
 
         let diff = grey_value_1 as i16 - grey_value_2 as i16;
 
-        // TODO : fix threshold comparison
+        // TODO : fix threshold comparison or use sobel edge transform
 
         if diff.abs() >= 100 {
 
@@ -163,15 +166,13 @@ fn run_try(
             let a = ((starting_point.0 - right_point.0), (starting_point.1 - right_point.1));
             let point_and_angles: Vec<(f64, (i32, i32))> = main_directions.iter().map(|point| {
                 let b = point;
-                println!("b {} {}", b.0, b.1);
                 // let cos_theta = ((a.0 * b.0 + a.1 * b.1) as f64) / (norm(a) * norm(*b));
                 // let theta = cos_theta.acos().to_degrees();
                 let theta = 
                     (a.0 as f64 * b.1 as f64 - a.1 as f64 * b.0 as f64 )
                     .atan2(a.0 as f64 * b.0 as f64 + a.1 as f64 * b.1 as f64)
                     .to_degrees();
-                    
-                println!("angle is {}", theta);
+
                 (theta, (point.0, point.1))
             }).collect();
         },
