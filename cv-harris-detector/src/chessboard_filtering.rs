@@ -292,6 +292,7 @@ pub struct ChessboardDetectorParameters {
     pub p: f64,
     pub d: f64,
     pub t: f64,
+    pub corner_distance: u32,
 }
 
 pub fn compute_adaptive_parameters(a_min: f64, a_max: f64) -> ChessboardDetectorParameters {
@@ -300,8 +301,9 @@ pub fn compute_adaptive_parameters(a_min: f64, a_max: f64) -> ChessboardDetector
     let p = 0.3f64 * a_max / a_min;
     let d = 2.0f64 * a_max;
     let t = 0.4f64 * a_max / a_min;
+    let corner_distance = 5u32; // TODO : find good distance for this
 
-    ChessboardDetectorParameters { r, p, d, t }
+    ChessboardDetectorParameters { r, p, d, t, corner_distance }
 }
 
 pub struct ClosestNeighborDistanceHistogram {
@@ -486,13 +488,10 @@ pub fn filter_out_corners(
 
             let corner_location = (*x, *y);
 
-            //TODO find good value for corner_distance;
-            let corner_distance = 5;
-
             let corner_filter = 
                 apply_center_symmetry_filter(
                     chessboard_parameters.p,
-                    corner_distance,
+                    chessboard_parameters.corner_distance,
                     &blurred_gray_image,
                     corner_location
                 );
@@ -538,7 +537,7 @@ pub fn filter_out_corners(
             corners_eliminated.push((corner.0, corner.1, *elimination_cause));
         }
 
-        for (index_to_remove, elimination_cause) in &wrong_corners_indexes {
+        for (index_to_remove, _elimination_cause) in &wrong_corners_indexes {
             output_corners.remove(*index_to_remove);
         }
 
