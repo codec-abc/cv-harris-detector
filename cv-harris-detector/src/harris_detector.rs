@@ -199,7 +199,7 @@ pub fn harris_corner(
     }
 }
 
-pub fn get_harris_corner_based_on_threshold(
+pub fn get_harris_corners_based_on_threshold(
     harris_normed_non_max_suppressed: &ImageBuffer<Luma<u8>, Vec<u8>>,
     harris_threshold: u8
 ) -> Vec<(i32, i32)> {

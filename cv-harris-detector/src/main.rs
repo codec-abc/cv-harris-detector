@@ -100,7 +100,7 @@ pub fn main_harris() {
         drawing::Blend(harris_image)
     };
 
-    let corners = get_harris_corner_based_on_threshold(&harris_normed_non_max_suppressed, harris_threshold);
+    let corners = get_harris_corners_based_on_threshold(&harris_normed_non_max_suppressed, harris_threshold);
 
     let number_of_corners = corners.len();
 

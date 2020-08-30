@@ -55,7 +55,6 @@ pub fn apply_center_symmetry_filter(
     let width = image.width();
     let height = image.height();
 
-    // TODO: use bigger window than a 3x3 window
     // Get all 8 pixels intensity around the current corner (they may be further apart than 1 pixel, thus the corner_distance)
 
     // | i4 | i3 | i2 | 
@@ -82,8 +81,6 @@ pub fn apply_center_symmetry_filter(
     let d4: f64 = (i2 - i6).abs();
     let d5: f64 = (i4 - i8).abs();
     let d6: f64 = (i2 + i6 - i4 - i8).abs();
-
-    // println!("d1 {} d2 {} d3 {} d4 {} d5 {} d6 {}", d1, d2, d3, d4, d5, d6);
 
     // check if criterion is met
     let is_real_corner =
@@ -216,77 +213,6 @@ fn norm((a_x, a_y) : (f64, f64)) -> f64 {
     (a_x.powi(2) + a_y.powi(2)).sqrt()
 }
 
-// pub struct ChessboardCorners {
-//     corner_a_index: usize,
-//     corner_a_location: CornerLocation,
-
-//     corner_b_index: usize,
-//     corner_b_location: CornerLocation,
-
-//     corner_c_index: usize,
-//     corner_c_location: CornerLocation,
-
-//     corner_d_index: usize,
-//     corner_d_location: CornerLocation,
-// }
-
-// return the index of the corners
-// pub fn get_corners(corners: &[CornerLocation]) -> ChessboardCorners {
-//     let mut a = std::i64::MAX; // top-left corner
-//     let mut b = std::i64::MIN; // top-right corner
-//     let mut c = std::i64::MAX; // bottom-left corner
-//     let mut d = std::i64::MIN; // bottom-right corner
-
-//     let mut a_index = 0;
-//     let mut b_index = 0;
-//     let mut c_index = 0;
-//     let mut d_index = 0;
-
-//     // for all corners we sum and compute the diff between x and y.
-//     for index in 0..corners.len() {
-//         let (current_x, current_y) = corners[index];
-
-//         let sum = current_x as i64 + current_y as i64 ;
-//         let diff = current_x as i64 - current_y as i64 ;
-
-
-//         if sum < a {
-//             a = sum;
-//             a_index = index;
-//         }
-
-//         if diff > b {
-//             b = sum;
-//             b_index = index;
-//         }
-
-//         if diff < c {
-//             c = sum;
-//             c_index = index;
-//         }
-
-//         if sum > d {
-//             d = sum;
-//             d_index = index;
-//         }
-
-//     }
-
-//     ChessboardCorners {
-//         corner_a_index: a_index,
-//         corner_a_location: corners[a_index],
-    
-//         corner_b_index: b_index,
-//         corner_b_location: corners[b_index],
-    
-//         corner_c_index: c_index,
-//         corner_c_location: corners[c_index],
-    
-//         corner_d_index: d_index,
-//         corner_d_location: corners[d_index]
-//     }
-// }
-
 pub struct ChessboardDetectorParameters {
     pub r: f64,
     pub p: f64,
@@ -384,7 +310,6 @@ impl ClosestNeighborDistanceHistogram {
                 let value = *value as f64;
                 let key = key as f64;
                 let distance_to_mean = (key as f64 - mean).abs();
-                println!("mean is {}, key is {}, distance to mean is {}", mean, key, distance_to_mean);
                 std_dev += value * distance_to_mean * distance_to_mean;
             }
         }
@@ -392,10 +317,7 @@ impl ClosestNeighborDistanceHistogram {
         std_dev = std_dev / number_of_elem_in_window as f64;
         std_dev = std_dev.sqrt();
 
-        println!("number of elements in window {}", number_of_elem_in_window);
-
         (mean, std_dev)
-
     }
 }
 
@@ -473,7 +395,7 @@ pub fn filter_out_corners(
     blurred_gray_image: &ImageBuffer<Luma<u8>, Vec<u8>>,
 ) -> FilteringResult {
     let mut output_corners = corners.clone();
-    let mut number_of_iterations = 0;
+    //let mut number_of_iterations = 0;
     let mut has_eliminated_at_least_a_point_this_loop_iteration = true;
     
     let mut wrong_corners_indexes: Vec<(usize, EliminationCause)> = vec!();
@@ -481,7 +403,7 @@ pub fn filter_out_corners(
 
     while has_eliminated_at_least_a_point_this_loop_iteration {
 
-        println!("iteration {} ===============", number_of_iterations);
+        //println!("iteration {} ===============", number_of_iterations);
         has_eliminated_at_least_a_point_this_loop_iteration = false;
 
         for (index, (x, y)) in output_corners.iter().enumerate()  {
@@ -497,7 +419,7 @@ pub fn filter_out_corners(
                 );
 
             if corner_filter == CornerFilterResult::FakeCorner {
-                println!("we have got a fake corner because of symmetry filter at {} {}", corner_location.0, corner_location.1);
+                //println!("we have got a fake corner because of symmetry filter at {} {}", corner_location.0, corner_location.1);
                 wrong_corners_indexes.push((index, EliminationCause::Symmetry));
                 has_eliminated_at_least_a_point_this_loop_iteration = true;
                 continue;
@@ -510,7 +432,7 @@ pub fn filter_out_corners(
             );
 
             if corner_filter == CornerFilterResult::FakeCorner {
-                println!("we have got a fake corner because of neighbor distance filter at {} {}", corner_location.0, corner_location.1);
+                //println!("we have got a fake corner because of neighbor distance filter at {} {}", corner_location.0, corner_location.1);
                 wrong_corners_indexes.push((index, EliminationCause::Distance));
                 has_eliminated_at_least_a_point_this_loop_iteration = true;
                 continue;
@@ -523,7 +445,7 @@ pub fn filter_out_corners(
             );
 
             if corner_filter == CornerFilterResult::FakeCorner {
-                println!("we have got a fake corner because of angle criterion at {} {}", corner_location.0, corner_location.1);
+                //println!("we have got a fake corner because of angle criterion at {} {}", corner_location.0, corner_location.1);
                 wrong_corners_indexes.push((index, EliminationCause::Angle));
                 has_eliminated_at_least_a_point_this_loop_iteration = true;
                 continue;
@@ -543,10 +465,10 @@ pub fn filter_out_corners(
 
         wrong_corners_indexes.clear();
 
-        number_of_iterations += 1;
+        //number_of_iterations += 1;
     }
 
-    println!("we have eliminated  {} corners in {} round(s)", corners_eliminated.len(), number_of_iterations);
+    //println!("we have eliminated  {} corners in {} round(s)", corners_eliminated.len(), number_of_iterations);
 
     FilteringResult {
         remaining_corners: output_corners,
