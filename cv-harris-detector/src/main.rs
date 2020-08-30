@@ -75,8 +75,6 @@ pub fn main_harris() {
     let k: f64 = 0.04f64; // Harris detector free parameter. The higher the value the less it detects.
 
     let gray_image = src_image.to_luma();
-    let width = gray_image.width();
-    let height = gray_image.height();
 
     let blurred_gray_image = filter::gaussian_blur_f32(&gray_image, 2.0f32);
 
