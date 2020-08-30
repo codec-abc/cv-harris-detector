@@ -122,20 +122,22 @@ pub fn main_harris() {
 
     let corners_centers = find_corners_mean_and_medium(&filtering_result.remaining_corners);
 
-    drawing::draw_filled_circle_mut(
-        &mut canvas, 
-        corners_centers.mean,
-        1i32,
-        Rgb([255, 0, 0]));
+    // drawing::draw_filled_circle_mut(
+    //     &mut canvas, 
+    //     corners_centers.mean,
+    //     1i32,
+    //     Rgb([255, 0, 0]));
 
-    drawing::draw_filled_circle_mut(
-        &mut canvas, 
-        corners_centers.medium,
-        1i32,
-        Rgb([0, 255, 0]));
+    // drawing::draw_filled_circle_mut(
+    //     &mut canvas, 
+    //     corners_centers.medium,
+    //     1i32,
+    //     Rgb([0, 255, 0]));
 
-    let out_img = DynamicImage::ImageRgb8(canvas.0.clone());
-    imgshow::imgshow(&out_img);
+    // let out_img = DynamicImage::ImageRgb8(canvas.0.clone());
+    // imgshow::imgshow(&out_img);
+
+    run_chessboard_detection(&filtering_result.remaining_corners, &corners_centers, &mut canvas);
 
 }
 
