@@ -191,8 +191,8 @@ pub fn apply_neighbor_angle_filter(
     let (closer_neighbor_1_x, closer_neighbor_1_y) = closer_neighbor_1.1;
     let (closer_neighbor_2_x, closer_neighbor_2_y) = closer_neighbor_2.1;
 
-    let a = ((self_x_f64  - closer_neighbor_1_x), (self_y_f64 - closer_neighbor_1_y));
-    let b = ((self_x_f64  - closer_neighbor_2_x), (self_y_f64 - closer_neighbor_2_y));
+    let a = ((self_x_f64 - closer_neighbor_1_x), (self_y_f64 - closer_neighbor_1_y));
+    let b = ((self_x_f64 - closer_neighbor_2_x), (self_y_f64 - closer_neighbor_2_y));
 
     let cos_theta = (a.0 * b.0 + a.1 * b.1) / (norm(a) * norm(b));
 
