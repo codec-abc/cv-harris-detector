@@ -134,7 +134,7 @@ fn run_try(
             let (_dist, point) = other_points_and_distances_to_starting_point[i];
             let dir = diff(point, starting_point);
             let dir_length = norm(dir);
-            let new_length = 0.4f64 * dir_length;
+            let new_length = 0.3f64 * dir_length;
             let scaled_dir = (dir.0 as f64 * new_length / dir_length, dir.1 as f64 * new_length / dir_length);
 
             let perpendicular_dir = (scaled_dir.1, -scaled_dir.0);
@@ -152,7 +152,7 @@ fn run_try(
             let diff = grey_value_1 as i16 - grey_value_2 as i16;
 
             // TODO : fix threshold comparison or use sobel edge transform
-            if diff.abs() >= 100 {
+            if diff.abs() >= 80 {
                 
                 let b = dir;
 
@@ -183,10 +183,17 @@ fn run_try(
     }
     
     for connection in connections {
-        drawing::draw_filled_circle_mut(
+        // drawing::draw_filled_circle_mut(
+        //     canvas, 
+        //     connection.start,
+        //     1i32,
+        //     Rgb([0, 255, 0])
+        // );
+
+        drawing::draw_line_segment_mut(
             canvas, 
-            connection.start,
-            1i32,
+            (connection.start.0 as f32, connection.start.1 as f32), 
+            (connection.end.0 as f32, connection.end.1 as f32), 
             Rgb([0, 255, 0])
         );
     }

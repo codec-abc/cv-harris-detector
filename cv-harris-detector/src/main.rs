@@ -10,7 +10,7 @@ fn get_image_path_and_chessboard_size() -> (String, (i32, i32)) {
     //let image_path = "./cv-harris-detector/test_images/fileListImageUnDist.jpg";
     //let image_path = "./cv-harris-detector/test_images/bouguet/Image5.tif";
     //let image_path = "./cv-harris-detector/test_images/other/CalibIm1.tif";
-    let image_path = "./cv-harris-detector/test_images/stereopi-tutorial/left_01.png"; // 9x6
+    let image_path = "./cv-harris-detector/test_images/stereopi-tutorial/left_05.png"; // 9x6
 
     let chessboard_size = (9, 6);
     (image_path.to_owned(), chessboard_size)
@@ -140,7 +140,6 @@ pub fn main_harris() {
     run_chessboard_detection(
 &filtering_result.remaining_corners, 
         &corners_centers,
-        //&gray_image,
         &blurred_gray_image,
         &mut canvas
     );
