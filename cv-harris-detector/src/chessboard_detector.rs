@@ -5,13 +5,17 @@
 use image::{DynamicImage, Rgb, Luma, ImageBuffer};
 use imageproc::{drawing};
 
+use crate::common::get_pixel_coord;
+
+type CornerLocation = (i32, i32);
+
 pub struct CornersMeanAndMedium {
-    pub mean: (i32, i32),
-    pub medium: (i32, i32),
+    pub mean: CornerLocation,
+    pub medium: CornerLocation,
 }
 
 pub fn find_corners_mean_and_medium(
-    possible_corners: &Vec<(i32, i32)>,
+    possible_corners: &Vec<CornerLocation>,
 ) -> CornersMeanAndMedium {
     let number_of_possibles_corners = possible_corners.len();
     assert!(number_of_possibles_corners > 0);
@@ -46,10 +50,10 @@ pub fn find_corners_mean_and_medium(
     }
 }
 
-// //     (chessboard_size_x, chessboard_size_x): (i32, i32),
+// //     (chessboard_size_x, chessboard_size_x): CornerLocation,
 
 pub fn run_chessboard_detection(
-    possible_corners: &Vec<(i32, i32)>,
+    possible_corners: &Vec<CornerLocation>,
     corners_centers: &CornersMeanAndMedium,
     gray_image: &ImageBuffer<Luma<u8>, Vec<u8>>,
     canvas: &mut drawing::Blend<ImageBuffer<Rgb<u8>, Vec<u8>>>,
@@ -60,6 +64,7 @@ pub fn run_chessboard_detection(
     let mut distances_to_starting_point = 
         distance_to_points(starting_point_coordinates, possible_corners);
 
+    // TODO: if it doesn't work try we a few alternating starting points
     {
         let index_for_starting_point = 0usize;
         let starting_point = distances_to_starting_point[index_for_starting_point].1;
@@ -70,89 +75,112 @@ pub fn run_chessboard_detection(
         //     distances_to_starting_point
         //     .into_iter()
         //     .map(|(_dist, point)| point)
-        //     .collect::<Vec<(i32, i32)>>();
+        //     .collect::<Vec<CornerLocation>>();
 
-        run_try(starting_point, &possible_corners, gray_image, canvas);
+        let mut connections : Vec<Connection> = vec!();
+        let mut remaining_points_to_explore: Vec<CornerLocation> = vec!();
+
+        remaining_points_to_explore.push(starting_point);
+
+        run_try(
+            &mut remaining_points_to_explore,
+            &mut connections,
+            &possible_corners, 
+            gray_image, 
+            canvas
+        );
     }
 }
 
+struct Connection {
+    start: CornerLocation,
+    end: CornerLocation,
+    angle: f64,
+    length: f64,
+}
+
 fn run_try(
-    starting_point: (i32, i32),
-    corners: &Vec<(i32, i32)>,
+    //starting_point: CornerLocation,
+    remaining_points_to_explore: &mut Vec<CornerLocation>,
+    connections: &mut Vec<Connection>,
+    corners: &Vec<CornerLocation>,
     gray_image: &ImageBuffer<Luma<u8>, Vec<u8>>,
     canvas: &mut drawing::Blend<ImageBuffer<Rgb<u8>, Vec<u8>>>
 ) {
 
-    let other_possibles_corners: Vec<(i32, i32)> = 
-        corners.clone().into_iter()
-        .filter(|e| {
-            !(e.0 == starting_point.0 && e.1 == starting_point.1)
-        })
-        .collect();
+    let width = gray_image.width();
+    let height = gray_image.height();
 
-    let other_points_and_distances_to_starting_point = 
-        distance_to_points(starting_point, &other_possibles_corners);
+    let mut explored_corners = vec!();
 
-    assert!(other_possibles_corners.len() >= 7);
 
-    let mut main_directions = vec!();
+    while remaining_points_to_explore.len() > 0 {
 
-    for i in 0..8 {
-        let (_dist, point) = other_points_and_distances_to_starting_point[i];
-        let dir = diff(point, starting_point);
-        let dir_length = norm(dir);
-        let new_length = 0.4f64 * dir_length;
-        let scaled_dir = (dir.0 as f64 * new_length / dir_length, dir.1 as f64 * new_length / dir_length);
+        println!("starting loop");
 
-        let perpendicular_dir = (scaled_dir.1, -scaled_dir.0);
+        let starting_point = remaining_points_to_explore.remove(0);
 
-        let grey_value_1_coord_coord_f64 = (scaled_dir.0 + perpendicular_dir.0, scaled_dir.1 + perpendicular_dir.1);
-        let grey_value_2_coord_coord_f64 = (scaled_dir.0 - perpendicular_dir.0, scaled_dir.1 - perpendicular_dir.1);
+        explored_corners.push(starting_point);
 
-        let grey_value_1_coord = (starting_point.0 + grey_value_1_coord_coord_f64.0 as i32, starting_point.1 + grey_value_1_coord_coord_f64.1 as i32);
-        let grey_value_2_coord = (starting_point.0 + grey_value_2_coord_coord_f64.0 as i32, starting_point.1 + grey_value_2_coord_coord_f64.1 as i32);
+        let other_possibles_corners: Vec<CornerLocation> = 
+            corners
+            .clone()
+            .into_iter()
+            .filter(|e| {
+                !(e.0 == starting_point.0 && e.1 == starting_point.1) &&
+                connections.iter().find(|c| c.start.0 == e.0 && c.start.1 == e.1).is_none() &&
+                !explored_corners.contains(e)
+            })
+            .collect();
 
-        // TODO : check coordinates are on screen
+        println!("other_possibles_corners.len() {}", other_possibles_corners.len());
+        println!("connections.len() {}", connections.len());
 
-        let grey_value_1 = gray_image[(grey_value_1_coord.0 as u32, grey_value_1_coord.1 as u32)][0];
-        let grey_value_2 = gray_image[(grey_value_2_coord.0 as u32, grey_value_2_coord.1 as u32)][0];
+        let other_points_and_distances_to_starting_point = 
+            distance_to_points(starting_point, &other_possibles_corners);
 
-        let diff = grey_value_1 as i16 - grey_value_2 as i16;
+        //assert!(other_possibles_corners.len() >= 7);
 
-        // TODO : fix threshold comparison or use sobel edge transform
+        let other_corners_count = std::cmp::min(7, other_possibles_corners.len());
+        let mut main_directions = vec!();
 
-        if diff.abs() >= 100 {
+        for i in 0..other_corners_count {
+            let (_dist, point) = other_points_and_distances_to_starting_point[i];
+            let dir = diff(point, starting_point);
+            let dir_length = norm(dir);
+            let new_length = 0.4f64 * dir_length;
+            let scaled_dir = (dir.0 as f64 * new_length / dir_length, dir.1 as f64 * new_length / dir_length);
 
-            main_directions.push(dir);
+            let perpendicular_dir = (scaled_dir.1, -scaled_dir.0);
 
-            // drawing::draw_filled_circle_mut(
-            //     canvas, 
-            //     grey_value_1_coord,
-            //     1i32,
-            //     Rgb([0, 255, 0])
-            // );
+            let grey_value_1_coord_coord_f64 = (scaled_dir.0 + perpendicular_dir.0, scaled_dir.1 + perpendicular_dir.1);
+            let grey_value_2_coord_coord_f64 = (scaled_dir.0 - perpendicular_dir.0, scaled_dir.1 - perpendicular_dir.1);
 
-            // drawing::draw_filled_circle_mut(
-            //     canvas, 
-            //     grey_value_2_coord,
-            //     1i32,
-            //     Rgb([255, 255, 0])
-            // );
+            let grey_value_1_coord = (starting_point.0 + grey_value_1_coord_coord_f64.0 as i32, starting_point.1 + grey_value_1_coord_coord_f64.1 as i32);
+            let grey_value_2_coord = (starting_point.0 + grey_value_2_coord_coord_f64.0 as i32, starting_point.1 + grey_value_2_coord_coord_f64.1 as i32);
 
-            drawing::draw_filled_circle_mut(
-                canvas, 
-                point,
-                1i32,
-                Rgb([0, 255, 0])
-            );
+            // TODO : check coordinates are on screen
+
+            println!("{} {}", grey_value_1_coord.0, grey_value_1_coord.1);
+            println!("{} {}", grey_value_2_coord.0, grey_value_2_coord.1);
+
+            println!("====");
+
+            let grey_value_1 = gray_image[get_pixel_coord((grey_value_1_coord.0 as i32, grey_value_1_coord.1 as i32), width, height)][0];
+            let grey_value_2 = gray_image[get_pixel_coord((grey_value_2_coord.0 as i32, grey_value_2_coord.1 as i32), width, height)][0];
+
+            let diff = grey_value_1 as i16 - grey_value_2 as i16;
+
+            // TODO : fix threshold comparison or use sobel edge transform
+
+            if diff.abs() >= 100 {
+                main_directions.push(dir);
+            }
+
         }
 
-    }
+        if main_directions.len() >= 1 {
 
-    match main_directions.len() {
-        0 | 1 => (), // cannot found 2 main directions if we only have one or zero
-        2 | 3 => (),
-        4 => {
             let max = main_directions
                 .iter()
                 .max_by(|a, b|  {
@@ -164,41 +192,85 @@ fn run_try(
             let norm_max = norm((max.0, max.1));
             let right_point = (starting_point.0 + norm_max as i32, starting_point.1);
             let a = ((starting_point.0 - right_point.0), (starting_point.1 - right_point.1));
-            
-            let point_and_angles: Vec<(f64, (i32, i32))> = 
+
+            let new_connections: Vec<(f64, f64, CornerLocation)> = 
                 main_directions.iter().map(|point| {
                 let b = point;
+
                 let theta = 
                     (a.0 as f64 * b.1 as f64 - a.1 as f64 * b.0 as f64 )
                     .atan2(a.0 as f64 * b.0 as f64 + a.1 as f64 * b.1 as f64)
                     .to_degrees();
+                
+                let length = distance(a, *b);
 
-                (theta, (point.0, point.1))
+                (theta, length, (point.0, point.1))
             }).collect();
-        },
-        5 | 6 | 7  => (), // too much directions ??
-        _ => panic!("Cannot have more than 7 ")
+
+            for (angle, length, end) in &new_connections {
+
+                println!("adding connection");
+
+                connections.push(
+                    Connection {
+                        start: starting_point,
+                        end: *end,
+                        angle: *angle,
+                        length: *length
+                    }
+                );
+
+                if connections.iter().find(|c| c.start.0 == end.0 && c.start.1 == end.1).is_none() {
+                    println!("adding remaining_points_to_explore");
+                    remaining_points_to_explore.push(*end);
+                } else {
+                    println!("not adding connection because point was already explored");
+                }
+                
+            }
+        }
     }
 
+      // drawing::draw_filled_circle_mut(
+        //     canvas, 
+        //     grey_value_1_coord,
+        //     1i32,
+        //     Rgb([0, 255, 0])
+        // );
+
+        // drawing::draw_filled_circle_mut(
+        //     canvas, 
+        //     grey_value_2_coord,
+        //     1i32,
+        //     Rgb([255, 255, 0])
+        // );
+
+        // drawing::draw_filled_circle_mut(
+        //     canvas, 
+        //     point,
+        //     1i32,
+        //     Rgb([0, 255, 0])
+        // );
+    
+        // for i in 0..4 {
+        //     let (_dist, point) = other_points_and_distances_to_starting_point[i];
+        //     drawing::draw_filled_circle_mut(
+        //         canvas, 
+        //         (point.0, point.1),
+        //         1i32,
+        //         Rgb([0, 255, 0])
+        //     );
+        // }
    
-    // for i in 0..4 {
-    //     let (_dist, point) = other_points_and_distances_to_starting_point[i];
-    //     drawing::draw_filled_circle_mut(
-    //         canvas, 
-    //         (point.0, point.1),
-    //         1i32,
-    //         Rgb([0, 255, 0])
-    //     );
-    // }
-   
+    println!("done");
     let out_img = DynamicImage::ImageRgb8(canvas.0.clone());
     imgshow::imgshow(&out_img);
 }
 
 fn distance_to_points(
-    point: (i32, i32),
-    other_points: &[(i32, i32)],
-) -> Vec<(f64, (i32, i32))> {
+    point: CornerLocation,
+    other_points: &[CornerLocation],
+) -> Vec<(f64, CornerLocation)> {
     let mut distances_to_starting_point = vec!();
 
     for (current_x, current_y) in other_points {
@@ -217,14 +289,14 @@ fn distance_to_points(
     distances_to_starting_point
 }
 
-fn distance((a_x, a_y) : (i32, i32), (b_x, b_y) : (i32, i32)) -> f64 {
+fn distance((a_x, a_y) : CornerLocation, (b_x, b_y) : CornerLocation) -> f64 {
     ((a_x as f64 - b_x as f64).powi(2) + (a_y as f64 - b_y as f64).powi(2)).sqrt()
 }
 
-fn diff((a_x, a_y) : (i32, i32), (b_x, b_y) : (i32, i32)) -> (i32, i32) {
+fn diff((a_x, a_y) : CornerLocation, (b_x, b_y) : CornerLocation) -> CornerLocation {
     ((a_x - b_x), (a_y - b_y))
 }
 
-fn norm((a_x, a_y) : (i32, i32)) -> f64 {
+fn norm((a_x, a_y) : CornerLocation) -> f64 {
     ((a_x as f64).powi(2) + (a_y as f64).powi(2)).sqrt()
 }
