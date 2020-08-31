@@ -50,7 +50,7 @@ pub fn find_corners_mean_and_medium(
     }
 }
 
-// //     (chessboard_size_x, chessboard_size_x): CornerLocation,
+// (chessboard_size_x, chessboard_size_x): CornerLocation,
 
 pub fn run_chessboard_detection(
     possible_corners: &Vec<CornerLocation>,
@@ -68,14 +68,6 @@ pub fn run_chessboard_detection(
     {
         let index_for_starting_point = 0usize;
         let starting_point = distances_to_starting_point[index_for_starting_point].1;
-
-        //distances_to_starting_point.remove(index_for_starting_point);
-
-        // let other_points = 
-        //     distances_to_starting_point
-        //     .into_iter()
-        //     .map(|(_dist, point)| point)
-        //     .collect::<Vec<CornerLocation>>();
 
         let mut connections : Vec<Connection> = vec!();
         let mut remaining_points_to_explore: Vec<CornerLocation> = vec!();
@@ -100,7 +92,6 @@ struct Connection {
 }
 
 fn run_try(
-    //starting_point: CornerLocation,
     remaining_points_to_explore: &mut Vec<CornerLocation>,
     connections: &mut Vec<Connection>,
     corners: &Vec<CornerLocation>,
@@ -112,7 +103,6 @@ fn run_try(
     let height = gray_image.height();
 
     let mut explored_corners = vec!();
-
 
     while remaining_points_to_explore.len() > 0 {
         
@@ -156,7 +146,6 @@ fn run_try(
             let grey_value_2_coord = (starting_point.0 + grey_value_2_coord_coord_f64.0 as i32, starting_point.1 + grey_value_2_coord_coord_f64.1 as i32);
 
             // TODO : check coordinates are on screen
-
             let grey_value_1 = gray_image[get_pixel_coord((grey_value_1_coord.0 as i32, grey_value_1_coord.1 as i32), width, height)][0];
             let grey_value_2 = gray_image[get_pixel_coord((grey_value_2_coord.0 as i32, grey_value_2_coord.1 as i32), width, height)][0];
 
@@ -192,30 +181,8 @@ fn run_try(
 
         }
     }
-
-      // drawing::draw_filled_circle_mut(
-        //     canvas, 
-        //     grey_value_1_coord,
-        //     1i32,
-        //     Rgb([0, 255, 0])
-        // );
-
-        // drawing::draw_filled_circle_mut(
-        //     canvas, 
-        //     grey_value_2_coord,
-        //     1i32,
-        //     Rgb([255, 255, 0])
-        // );
-
-        // drawing::draw_filled_circle_mut(
-        //     canvas, 
-        //     point,
-        //     1i32,
-        //     Rgb([0, 255, 0])
-        // );
     
     for connection in connections {
-        //let (_dist, point) = other_points_and_distances_to_starting_point[i];
         drawing::draw_filled_circle_mut(
             canvas, 
             connection.start,
