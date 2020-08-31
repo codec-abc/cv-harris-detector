@@ -2,8 +2,8 @@
 // https://www.isprs.org/proceedings/XXXVII/congress/5_pdf/04.pdf
 // https://www.researchgate.net/publication/228345254_Automatic_calibration_of_digital_cameras_using_planar_chess-board_patterns/link/0fcfd5134c9811b4b7000000/download
 
-use image::{DynamicImage, Rgb, Luma, imageops::FilterType, ImageBuffer};
-use imageproc::{drawing, filter};
+use image::{DynamicImage, Rgb, Luma, ImageBuffer};
+use imageproc::{drawing};
 
 pub struct CornersMeanAndMedium {
     pub mean: (i32, i32),
@@ -164,10 +164,10 @@ fn run_try(
             let norm_max = norm((max.0, max.1));
             let right_point = (starting_point.0 + norm_max as i32, starting_point.1);
             let a = ((starting_point.0 - right_point.0), (starting_point.1 - right_point.1));
-            let point_and_angles: Vec<(f64, (i32, i32))> = main_directions.iter().map(|point| {
+            
+            let point_and_angles: Vec<(f64, (i32, i32))> = 
+                main_directions.iter().map(|point| {
                 let b = point;
-                // let cos_theta = ((a.0 * b.0 + a.1 * b.1) as f64) / (norm(a) * norm(*b));
-                // let theta = cos_theta.acos().to_degrees();
                 let theta = 
                     (a.0 as f64 * b.1 as f64 - a.1 as f64 * b.0 as f64 )
                     .atan2(a.0 as f64 * b.0 as f64 + a.1 as f64 * b.1 as f64)

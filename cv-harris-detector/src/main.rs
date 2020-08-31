@@ -1,4 +1,4 @@
-use image::{DynamicImage, Rgb, imageops::FilterType};
+use image::{DynamicImage};
 use imageproc::{drawing, filter};
 
 use cv_harris_detector::*;

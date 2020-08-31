@@ -15,8 +15,8 @@
 // https://github.com/opencv/opencv/blob/72c5ac37deaf59f73c918449a0f90e49f7866034/modules/calib3d/src/calibinit.cpp#L2000
 // https://github.com/opencv/opencv/blob/72c5ac37deaf59f73c918449a0f90e49f7866034/modules/calib3d/src/calibinit.cpp#L742
 
-use image::{ImageBuffer, Luma, DynamicImage, Rgb, imageops::FilterType};
-use imageproc::{drawing, filter};
+use image::{ImageBuffer, Luma, DynamicImage, Rgb};
+use imageproc::{drawing};
 use std::collections::HashMap;
 
 use crate::common::get_pixel_coord;
