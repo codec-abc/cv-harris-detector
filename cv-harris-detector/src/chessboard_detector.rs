@@ -115,31 +115,25 @@ fn run_try(
 
 
     while remaining_points_to_explore.len() > 0 {
-
-        println!("starting loop");
-
+        
         let starting_point = remaining_points_to_explore.remove(0);
-
         explored_corners.push(starting_point);
 
         let other_possibles_corners: Vec<CornerLocation> = 
             corners
             .clone()
             .into_iter()
-            .filter(|e| {
-                !(e.0 == starting_point.0 && e.1 == starting_point.1) &&
-                connections.iter().find(|c| c.start.0 == e.0 && c.start.1 == e.1).is_none() &&
-                !explored_corners.contains(e)
+            .filter(|corner| {
+                !(corner.0 == starting_point.0 && corner.1 == starting_point.1) &&
+                explored_corners.iter().find(|explored_corner| {
+                    corner.0 == explored_corner.0 && corner.1 == explored_corner.1
+                }).is_none()
             })
             .collect();
 
-        println!("other_possibles_corners.len() {}", other_possibles_corners.len());
-        println!("connections.len() {}", connections.len());
 
         let other_points_and_distances_to_starting_point = 
             distance_to_points(starting_point, &other_possibles_corners);
-
-        //assert!(other_possibles_corners.len() >= 7);
 
         let other_corners_count = std::cmp::min(7, other_possibles_corners.len());
         let mut main_directions = vec!();
@@ -161,18 +155,12 @@ fn run_try(
 
             // TODO : check coordinates are on screen
 
-            println!("{} {}", grey_value_1_coord.0, grey_value_1_coord.1);
-            println!("{} {}", grey_value_2_coord.0, grey_value_2_coord.1);
-
-            println!("====");
-
             let grey_value_1 = gray_image[get_pixel_coord((grey_value_1_coord.0 as i32, grey_value_1_coord.1 as i32), width, height)][0];
             let grey_value_2 = gray_image[get_pixel_coord((grey_value_2_coord.0 as i32, grey_value_2_coord.1 as i32), width, height)][0];
 
             let diff = grey_value_1 as i16 - grey_value_2 as i16;
 
             // TODO : fix threshold comparison or use sobel edge transform
-
             if diff.abs() >= 100 {
                 main_directions.push(dir);
             }
@@ -194,8 +182,8 @@ fn run_try(
             let a = ((starting_point.0 - right_point.0), (starting_point.1 - right_point.1));
 
             let new_connections: Vec<(f64, f64, CornerLocation)> = 
-                main_directions.iter().map(|point| {
-                let b = point;
+                main_directions.iter().map(|dir| {
+                let b = dir;
 
                 let theta = 
                     (a.0 as f64 * b.1 as f64 - a.1 as f64 * b.0 as f64 )
@@ -204,12 +192,10 @@ fn run_try(
                 
                 let length = distance(a, *b);
 
-                (theta, length, (point.0, point.1))
+                (theta, length, (starting_point.0 + dir.0, starting_point.1 + dir.1))
             }).collect();
 
             for (angle, length, end) in &new_connections {
-
-                println!("adding connection");
 
                 connections.push(
                     Connection {
@@ -220,11 +206,17 @@ fn run_try(
                     }
                 );
 
-                if connections.iter().find(|c| c.start.0 == end.0 && c.start.1 == end.1).is_none() {
-                    println!("adding remaining_points_to_explore");
+                if 
+                    explored_corners.iter().find(|explored_corner| 
+                    {
+                        explored_corner.0 == end.0 && explored_corner.1 == end.1
+                    }).is_none() 
+                    && 
+                    remaining_points_to_explore.iter().find(|remaining_point_to_explore| {
+                        remaining_point_to_explore.0 == end.0 && remaining_point_to_explore.1 == end.1
+                    }).is_none()
+                {
                     remaining_points_to_explore.push(*end);
-                } else {
-                    println!("not adding connection because point was already explored");
                 }
                 
             }
@@ -252,15 +244,15 @@ fn run_try(
         //     Rgb([0, 255, 0])
         // );
     
-        // for i in 0..4 {
-        //     let (_dist, point) = other_points_and_distances_to_starting_point[i];
-        //     drawing::draw_filled_circle_mut(
-        //         canvas, 
-        //         (point.0, point.1),
-        //         1i32,
-        //         Rgb([0, 255, 0])
-        //     );
-        // }
+    for connection in connections {
+        //let (_dist, point) = other_points_and_distances_to_starting_point[i];
+        drawing::draw_filled_circle_mut(
+            canvas, 
+            connection.start,
+            1i32,
+            Rgb([0, 255, 0])
+        );
+    }
    
     println!("done");
     let out_img = DynamicImage::ImageRgb8(canvas.0.clone());
