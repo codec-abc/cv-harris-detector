@@ -1,5 +1,5 @@
 use image::{DynamicImage, ImageBuffer, Luma, Rgb};
-use imageproc::{filter, gradients};
+use imageproc::{gradients};
 
 use crate::common::get_pixel_coord;
 
@@ -109,7 +109,7 @@ pub fn harris_corner(
     k: f64,
     //blur: Option<f32>,
 ) -> HarrisDetectorResult {
-    let blurred_image: Option<ImageBuffer<Luma<u8>, Vec<u8>>>;
+    // let blurred_image: Option<ImageBuffer<Luma<u8>, Vec<u8>>>;
 
     // TODO : fix blur, it doesn't work great
     // may use http://dev.theomader.com/gaussian-kernel-calculator/
