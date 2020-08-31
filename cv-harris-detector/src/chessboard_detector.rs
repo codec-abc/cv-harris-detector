@@ -124,9 +124,9 @@ fn run_try(
             .clone()
             .into_iter()
             .filter(|corner| {
-                !(corner.0 == starting_point.0 && corner.1 == starting_point.1) &&
+                !equals(*corner, starting_point) &&
                 explored_corners.iter().find(|explored_corner| {
-                    corner.0 == explored_corner.0 && corner.1 == explored_corner.1
+                    equals(*corner, **explored_corner)
                 }).is_none()
             })
             .collect();
@@ -136,7 +136,9 @@ fn run_try(
             distance_to_points(starting_point, &other_possibles_corners);
 
         let other_corners_count = std::cmp::min(7, other_possibles_corners.len());
-        let mut main_directions = vec!();
+
+        let right_point = (starting_point.0 + width as i32, starting_point.1);
+        let a = ((starting_point.0 - right_point.0), (starting_point.1 - right_point.1));
 
         for i in 0..other_corners_count {
             let (_dist, point) = other_points_and_distances_to_starting_point[i];
@@ -162,64 +164,32 @@ fn run_try(
 
             // TODO : fix threshold comparison or use sobel edge transform
             if diff.abs() >= 100 {
-                main_directions.push(dir);
-            }
-
-        }
-
-        if main_directions.len() >= 1 {
-
-            let max = main_directions
-                .iter()
-                .max_by(|a, b|  {
-                    let norm_a = norm((a.0, a.1));
-                    let norm_b = norm((b.0, b.1));
-                    norm_a.partial_cmp(&norm_b).unwrap()
-                }).unwrap();
-
-            let norm_max = norm((max.0, max.1));
-            let right_point = (starting_point.0 + norm_max as i32, starting_point.1);
-            let a = ((starting_point.0 - right_point.0), (starting_point.1 - right_point.1));
-
-            let new_connections: Vec<(f64, f64, CornerLocation)> = 
-                main_directions.iter().map(|dir| {
+                
                 let b = dir;
 
-                let theta = 
+                let angle = 
                     (a.0 as f64 * b.1 as f64 - a.1 as f64 * b.0 as f64 )
                     .atan2(a.0 as f64 * b.0 as f64 + a.1 as f64 * b.1 as f64)
                     .to_degrees();
                 
-                let length = distance(a, *b);
-
-                (theta, length, (starting_point.0 + dir.0, starting_point.1 + dir.1))
-            }).collect();
-
-            for (angle, length, end) in &new_connections {
+                let length = distance(a, b);
 
                 connections.push(
                     Connection {
                         start: starting_point,
-                        end: *end,
-                        angle: *angle,
-                        length: *length
+                        end: point,
+                        angle: angle,
+                        length: length
                     }
                 );
 
-                if 
-                    explored_corners.iter().find(|explored_corner| 
-                    {
-                        explored_corner.0 == end.0 && explored_corner.1 == end.1
-                    }).is_none() 
-                    && 
-                    remaining_points_to_explore.iter().find(|remaining_point_to_explore| {
-                        remaining_point_to_explore.0 == end.0 && remaining_point_to_explore.1 == end.1
-                    }).is_none()
+                if explored_corners.iter().find(|ex| equals(**ex, point)).is_none() && 
+                    remaining_points_to_explore.iter().find(|r| equals(**r, point)).is_none()
                 {
-                    remaining_points_to_explore.push(*end);
+                    remaining_points_to_explore.push(point);
                 }
-                
             }
+
         }
     }
 
@@ -291,4 +261,8 @@ fn diff((a_x, a_y) : CornerLocation, (b_x, b_y) : CornerLocation) -> CornerLocat
 
 fn norm((a_x, a_y) : CornerLocation) -> f64 {
     ((a_x as f64).powi(2) + (a_y as f64).powi(2)).sqrt()
+}
+
+fn equals((a_x, a_y) : CornerLocation, (b_x, b_y) : CornerLocation) -> bool {
+    a_x == b_x && a_y == b_y
 }
