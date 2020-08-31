@@ -135,19 +135,43 @@ fn run_try(
             let dir = diff(point, starting_point);
             let dir_length = norm(dir);
             let new_length = 0.3f64 * dir_length;
-            let scaled_dir = (dir.0 as f64 * new_length / dir_length, dir.1 as f64 * new_length / dir_length);
+            
+            let scaled_dir = (
+                dir.0 as f64 * new_length / dir_length, 
+                dir.1 as f64 * new_length / dir_length);
 
             let perpendicular_dir = (scaled_dir.1, -scaled_dir.0);
 
-            let grey_value_1_coord_coord_f64 = (scaled_dir.0 + perpendicular_dir.0, scaled_dir.1 + perpendicular_dir.1);
-            let grey_value_2_coord_coord_f64 = (scaled_dir.0 - perpendicular_dir.0, scaled_dir.1 - perpendicular_dir.1);
+            let grey_value_1_coord_coord_f64 = (
+                scaled_dir.0 + perpendicular_dir.0, 
+                scaled_dir.1 + perpendicular_dir.1);
 
-            let grey_value_1_coord = (starting_point.0 + grey_value_1_coord_coord_f64.0 as i32, starting_point.1 + grey_value_1_coord_coord_f64.1 as i32);
-            let grey_value_2_coord = (starting_point.0 + grey_value_2_coord_coord_f64.0 as i32, starting_point.1 + grey_value_2_coord_coord_f64.1 as i32);
+            let grey_value_2_coord_coord_f64 = (
+                scaled_dir.0 - perpendicular_dir.0, 
+                scaled_dir.1 - perpendicular_dir.1);
+
+            let grey_value_1_coord = (
+                starting_point.0 + grey_value_1_coord_coord_f64.0 as i32, 
+                starting_point.1 + grey_value_1_coord_coord_f64.1 as i32);
+
+            let grey_value_2_coord = (
+                starting_point.0 + grey_value_2_coord_coord_f64.0 as i32, 
+                starting_point.1 + grey_value_2_coord_coord_f64.1 as i32);
 
             // TODO : check coordinates are on screen
-            let grey_value_1 = gray_image[get_pixel_coord((grey_value_1_coord.0 as i32, grey_value_1_coord.1 as i32), width, height)][0];
-            let grey_value_2 = gray_image[get_pixel_coord((grey_value_2_coord.0 as i32, grey_value_2_coord.1 as i32), width, height)][0];
+            let grey_value_1 = gray_image[
+                get_pixel_coord(
+                    (grey_value_1_coord.0 as i32, grey_value_1_coord.1 as i32), 
+                    width, 
+                    height
+                )][0];
+
+            let grey_value_2 = gray_image[
+                get_pixel_coord(
+                    (grey_value_2_coord.0 as i32, grey_value_2_coord.1 as i32), 
+                    width, 
+                    height
+                )][0];
 
             let diff = grey_value_1 as i16 - grey_value_2 as i16;
 
