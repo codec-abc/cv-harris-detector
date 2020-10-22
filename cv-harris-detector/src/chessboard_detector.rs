@@ -2,8 +2,10 @@
 // https://www.isprs.org/proceedings/XXXVII/congress/5_pdf/04.pdf
 // https://www.researchgate.net/publication/228345254_Automatic_calibration_of_digital_cameras_using_planar_chess-board_patterns/link/0fcfd5134c9811b4b7000000/download
 
+use bracket_color::prelude::HSV;
 use image::{DynamicImage, Rgb, Luma, ImageBuffer};
 use imageproc::{drawing};
+use rand::Rng;
 
 use crate::common::get_pixel_coord;
 
@@ -232,7 +234,7 @@ fn run_try(
 
                         let new_distance = distance(starting_point, point);
 
-                        let margin = 0.5f64;
+                        let margin = 0.6f64;
                         let lower_bound = 1.0f64 - margin;
                         let upper_bound = 1.0f64 + margin;
 
@@ -276,20 +278,39 @@ fn run_try(
 
         }
     }
+
+    //let mut rng = rand::thread_rng();/
+    let nb_connections = connections.len();
     
-    for connection in connections {
+    for (index, connection) in connections.iter().enumerate() {
         // drawing::draw_filled_circle_mut(
         //     canvas, 
         //     connection.start,
         //     1i32,
         //     Rgb([0, 255, 0])
         // );
+        // let r: u8 = rng.gen();
+        // let g: u8 = rng.gen();
+        // let b: u8 = rng.gen();
+
+        let h = index as f32 / nb_connections as f32;
+        let s = 1.0f32;
+        let v = 1.0f32;
+
+        let hsv = HSV::from_f32(h, s, v);
+
+        let rgb = hsv.to_rgb();
+
+        let r = (rgb.r * 255.0f32) as u8;
+        let g = (rgb.g * 255.0f32) as u8;
+        let b = (rgb.b * 255.0f32) as u8;
 
         drawing::draw_line_segment_mut(
             canvas, 
             (connection.start.0 as f32, connection.start.1 as f32), 
             (connection.end.0 as f32, connection.end.1 as f32), 
-            Rgb([0, 255, 0])
+            Rgb([r, g, b])
+            //Rgb([0, 255, 0])
         );
     }
    

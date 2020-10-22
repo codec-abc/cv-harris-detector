@@ -10,4 +10,6 @@ nalgebra = { version = "0.21.1", features = ["alloc"], default-features = false 
 num-traits = "0.2.12"
 image = "0.23.7"
 imageproc = "0.21.0"
+rand = "0.7.3"
+bracket-color = "0.8.1"
 imgshow = { version = "0.1.0", path = "../imgshow"}
