@@ -205,8 +205,7 @@ fn run_try(
             let diff = grey_value_1 as i16 - grey_value_2 as i16;
 
             // TODO : fix threshold comparison or use sobel edge transform
-            //if diff.abs() >= 30 {
-            if true {
+            if diff.abs() >= 100 {
                 
                 let b = dir;
 
@@ -227,13 +226,14 @@ fn run_try(
 
                 if count > 0
                 {
-                    let average_distance = total_distance / (count as f64) + 20.0f64;
+                    let bound_margin = 0.5f64;
+                    let absolute_margin = 20.0f64;
 
-                    let new_distance = distance(current_point, neighbor_point) + 20.0f64;
+                    let average_distance = total_distance / (count as f64) + absolute_margin;
+                    let new_distance = distance(current_point, neighbor_point) + absolute_margin;
 
-                    let margin = 0.5f64;
-                    let lower_bound = (1.0f64 - margin) * average_distance;
-                    let upper_bound = (1.0f64 + margin) * average_distance;
+                    let lower_bound = (1.0f64 - bound_margin) * average_distance;
+                    let upper_bound = (1.0f64 + bound_margin) * average_distance;
 
                     if lower_bound <= new_distance && new_distance <= upper_bound {
 
