@@ -138,7 +138,7 @@ pub fn main_harris() {
     // imgshow::imgshow(&out_img);
 
     run_chessboard_detection(
-&filtering_result.remaining_corners, 
+        &filtering_result.remaining_corners, 
         &corners_centers,
         &blurred_gray_image,
         &mut canvas
