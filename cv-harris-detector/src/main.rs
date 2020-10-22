@@ -60,7 +60,7 @@ fn generate_chessboard_parameters(
 
 pub fn main_harris() {
 
-    let (image_path, chessboard_size) = get_image_path_and_chessboard_size();
+    let (image_path, _chessboard_size) = get_image_path_and_chessboard_size();
     let src_image = image::open(image_path).expect("failed to open image file");
 
     // Probably not the right kind of conversion

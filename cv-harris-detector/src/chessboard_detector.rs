@@ -5,7 +5,7 @@
 use bracket_color::prelude::HSV;
 use image::{DynamicImage, Rgb, Luma, ImageBuffer};
 use imageproc::{drawing};
-use rand::Rng;
+//use rand::Rng;
 
 use crate::common::get_pixel_coord;
 
@@ -61,20 +61,20 @@ pub fn run_chessboard_detection(
     canvas: &mut drawing::Blend<ImageBuffer<Rgb<u8>, Vec<u8>>>,
 ) {
     
-    let starting_point_coordinates = corners_centers.mean; // TODO : use mean or medium
+    let current_point_coordinates = corners_centers.mean; // TODO : use mean or medium
 
-    let mut distances_to_starting_point = 
-        distance_to_points(starting_point_coordinates, possible_corners);
+    let distances_to_current_point = 
+        distance_to_points(current_point_coordinates, possible_corners);
 
     // TODO: if it doesn't work try we a few alternating starting points
     {
-        let index_for_starting_point = 0usize;
-        let starting_point = distances_to_starting_point[index_for_starting_point].1;
+        let index_for_current_point = 0usize;
+        let current_point = distances_to_current_point[index_for_current_point].1;
 
         let mut connections : Vec<Connection> = vec!();
         let mut remaining_points_to_explore: Vec<CornerLocation> = vec!();
 
-        remaining_points_to_explore.push(starting_point);
+        remaining_points_to_explore.push(current_point);
 
         run_try(
             &mut remaining_points_to_explore,
@@ -109,19 +109,21 @@ fn run_try(
 
     let mut nb_iter = 0;
 
+    let mut removed_points = vec!();
+
     while remaining_points_to_explore.len() > 0 {
         // println!("remaining_points_to_explore {}", remaining_points_to_explore.len());
         nb_iter = nb_iter + 1;
         
-        let starting_point = remaining_points_to_explore.remove(0);
-        explored_corners.push(starting_point);
+        let current_point = remaining_points_to_explore.remove(0);
+        explored_corners.push(current_point);
 
         let other_possibles_corners: Vec<CornerLocation> = 
             corners
             .clone()
             .into_iter()
             .filter(|corner| {
-                !equals(*corner, starting_point) &&
+                !equals(*corner, current_point) &&
                 explored_corners.iter().find(|explored_corner| {
                     equals(*corner, **explored_corner)
                 }).is_none()
@@ -129,10 +131,10 @@ fn run_try(
             .collect();
 
 
-        let mut other_points_and_distances_to_starting_point = 
-            distance_to_points(starting_point, &other_possibles_corners);
+        let mut other_points_and_distances_to_current_point = 
+            distance_to_points(current_point, &other_possibles_corners);
 
-        other_points_and_distances_to_starting_point
+        other_points_and_distances_to_current_point
             .sort_by(|a, b|  {
                 a.0.partial_cmp(&b.0).unwrap()
             }
@@ -140,16 +142,17 @@ fn run_try(
 
         let other_corners_count = std::cmp::min(7, other_possibles_corners.len());
 
-        let right_point = (starting_point.0 + width as i32, starting_point.1);
-        let a = ((starting_point.0 - right_point.0), (starting_point.1 - right_point.1));
+        let right_point = (current_point.0 + width as i32, current_point.1);
+        let a = ((current_point.0 - right_point.0), (current_point.1 - right_point.1));
         let mut added_connections = 0;
+
         for i in 0..other_corners_count {
             if added_connections >= 4 {
                 println!("Too many connections. stopping here for this point");
                 break;
             }
-            let (_dist, point) = other_points_and_distances_to_starting_point[i];
-            let dir = diff(point, starting_point);
+            let (_dist, neighbor_point) = other_points_and_distances_to_current_point[i];
+            let dir = diff(neighbor_point, current_point);
             let dir_length = norm(dir);
             let new_length = 0.3f64 * dir_length;
             
@@ -159,21 +162,21 @@ fn run_try(
 
             let perpendicular_dir = (scaled_dir.1, -scaled_dir.0);
 
-            let grey_value_1_coord_coord_f64 = (
+            let grey_value_1_coord_f64 = (
                 scaled_dir.0 + perpendicular_dir.0, 
                 scaled_dir.1 + perpendicular_dir.1);
 
-            let grey_value_2_coord_coord_f64 = (
+            let grey_value_2_coord_f64 = (
                 scaled_dir.0 - perpendicular_dir.0, 
                 scaled_dir.1 - perpendicular_dir.1);
 
             let grey_value_1_coord = (
-                starting_point.0 + grey_value_1_coord_coord_f64.0 as i32, 
-                starting_point.1 + grey_value_1_coord_coord_f64.1 as i32);
+                current_point.0 + grey_value_1_coord_f64.0 as i32, 
+                current_point.1 + grey_value_1_coord_f64.1 as i32);
 
             let grey_value_2_coord = (
-                starting_point.0 + grey_value_2_coord_coord_f64.0 as i32, 
-                starting_point.1 + grey_value_2_coord_coord_f64.1 as i32);
+                current_point.0 + grey_value_2_coord_f64.0 as i32, 
+                current_point.1 + grey_value_2_coord_f64.1 as i32);
 
             // TODO : check coordinates are on screen
             let grey_value_1 = gray_image[
@@ -209,8 +212,8 @@ fn run_try(
                 if connections.len() == 0 {
                     connections.push(
                         Connection {
-                            start: starting_point,
-                            end: point,
+                            start: current_point,
+                            end: neighbor_point,
                             angle: angle,
                             length: length
                         }
@@ -220,8 +223,8 @@ fn run_try(
                     let connections_clone = connections.clone();
                     
                     let (count, total_distance) = connections_clone.iter().filter(|connec| {
-                        connec.start == starting_point  ||  //connec.start == point ||
-                        connec.end == starting_point //|| connec.end == point
+                        connec.start == current_point  ||  //connec.start == neighbor_point ||
+                        connec.end == current_point //|| connec.end == neighbor_point
                     }).fold((0, 0.0f64), |(count, value), connec| {
                         (count + 1, value + distance(connec.start, connec.end))
                     });
@@ -232,7 +235,7 @@ fn run_try(
                     {
                         let average_distance = total_distance / (count as f64);
 
-                        let new_distance = distance(starting_point, point);
+                        let new_distance = distance(current_point, neighbor_point);
 
                         let margin = 0.6f64;
                         let lower_bound = 1.0f64 - margin;
@@ -241,8 +244,8 @@ fn run_try(
                         if average_distance * lower_bound <= new_distance && new_distance <= average_distance * upper_bound {
                             connections.push(
                                 Connection {
-                                    start: starting_point,
-                                    end: point,
+                                    start: current_point,
+                                    end: neighbor_point,
                                     angle: angle,
                                     length: length
                                 }
@@ -250,15 +253,29 @@ fn run_try(
                             added_connections = added_connections + 1;
                         } else {
                             add_point = false;
-                            println!("skipping point because neighbor(s) distance is too big or too small. New distance: {}, neighbor average distance: {}", new_distance, average_distance);
+
+                            println!(
+                                "skipping point {} {} because neighbor(s) distance is too big or too small. New distance: {}, neighbor average distance: {}", 
+                                current_point.0,
+                                current_point.1,
+                                new_distance, 
+                                average_distance
+                            );
+
+                            if current_point.0 == 241 && current_point.1 == 95 {
+                                println!("nb connections {}", count);
+                            }
+
+                            removed_points.push(current_point);
                         }
                     }
                     else {
                         println!("point has no connection yet.");
+
                         connections.push(
                             Connection {
-                                start: starting_point,
-                                end: point,
+                                start: current_point,
+                                end: neighbor_point,
                                 angle: angle,
                                 length: length
                             }
@@ -266,29 +283,25 @@ fn run_try(
                         added_connections = added_connections + 1;
                     }
 
-
                 }
 
-                if add_point && explored_corners.iter().find(|ex| equals(**ex, point)).is_none() && 
-                    remaining_points_to_explore.iter().find(|r| equals(**r, point)).is_none()
+                if add_point && 
+                    //explored_corners.iter().find(|ex| equals(**ex, point)).is_none() && 
+                    remaining_points_to_explore.iter().find(|r| equals(**r, neighbor_point)).is_none()
                 {
-                    remaining_points_to_explore.push(point);
+                    remaining_points_to_explore.push(neighbor_point);
                 }
             }
 
         }
     }
 
+    println!("try done in {} steps", nb_iter);
     //let mut rng = rand::thread_rng();/
     let nb_connections = connections.len();
     
     for (index, connection) in connections.iter().enumerate() {
-        // drawing::draw_filled_circle_mut(
-        //     canvas, 
-        //     connection.start,
-        //     1i32,
-        //     Rgb([0, 255, 0])
-        // );
+
         // let r: u8 = rng.gen();
         // let g: u8 = rng.gen();
         // let b: u8 = rng.gen();
@@ -312,6 +325,22 @@ fn run_try(
             Rgb([r, g, b])
             //Rgb([0, 255, 0])
         );
+
+        // drawing::draw_filled_circle_mut(
+        //     canvas, 
+        //     connection.start,
+        //     1i32,
+        //     Rgb([0, 255, 0])
+        // );
+    }
+
+    for removed_point in removed_points {
+        drawing::draw_filled_circle_mut(
+            canvas, 
+            removed_point,
+            1i32,
+            Rgb([0, 255, 0])
+        );
     }
    
     println!("done");
@@ -323,22 +352,22 @@ fn distance_to_points(
     point: CornerLocation,
     other_points: &[CornerLocation],
 ) -> Vec<(f64, CornerLocation)> {
-    let mut distances_to_starting_point = vec!();
+    let mut distances_to_current_point = vec!();
 
     for (current_x, current_y) in other_points {
         let current_corner = (*current_x, *current_y);
         let distance = distance(current_corner, point);
-        distances_to_starting_point.push((distance, current_corner));
+        distances_to_current_point.push((distance, current_corner));
     }
 
-    distances_to_starting_point.sort_by(|a, b| {
+    distances_to_current_point.sort_by(|a, b| {
         let a_distance: f64 = a.0;
         let b_distance: f64 = b.0;
 
         a_distance.partial_cmp(&b_distance).unwrap()
     });
 
-    distances_to_starting_point
+    distances_to_current_point
 }
 
 fn distance((a_x, a_y) : CornerLocation, (b_x, b_y) : CornerLocation) -> f64 {

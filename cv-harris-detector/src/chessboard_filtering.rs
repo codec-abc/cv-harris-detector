@@ -193,7 +193,7 @@ pub fn apply_neighbor_angle_filter(
 
     let cos_theta = (a.0 * b.0 + a.1 * b.1) / (norm(a) * norm(b));
 
-    let theta = cos_theta.acos().to_degrees();
+    //let theta = cos_theta.acos().to_degrees();
 
     if cos_theta < t_cosine_threshold {
         CornerFilterResult::RealCorner
