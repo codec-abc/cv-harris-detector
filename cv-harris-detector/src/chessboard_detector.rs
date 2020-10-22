@@ -110,7 +110,7 @@ fn run_try(
     let mut nb_iter = 0;
 
     while remaining_points_to_explore.len() > 0 {
-        println!("remaining_points_to_explore {}", remaining_points_to_explore.len());
+        // println!("remaining_points_to_explore {}", remaining_points_to_explore.len());
         nb_iter = nb_iter + 1;
         
         let starting_point = remaining_points_to_explore.remove(0);
@@ -226,7 +226,7 @@ fn run_try(
                         (count + 1, value + distance(connec.start, connec.end))
                     });
 
-                    println!("nb existing neighbor {}", count);
+                    // println!("nb existing neighbor {}", count);
 
                     if count > 0
                     {
@@ -294,7 +294,7 @@ fn run_try(
         // let b: u8 = rng.gen();
 
         let h = index as f32 / nb_connections as f32;
-        let s = 1.0f32;
+        let s = 0.5f32;
         let v = 1.0f32;
 
         let hsv = HSV::from_f32(h, s, v);
