@@ -109,7 +109,8 @@ fn run_try(
 
     let mut nb_iter = 0;
 
-    let mut discarded_edges = vec!();
+    let mut discarded_too_long_edges = vec!();
+    let mut discarded_edges_constrast_too_low = vec!();
 
     while remaining_points_to_explore.len() > 0 {
         // println!("remaining_points_to_explore {}", remaining_points_to_explore.len());
@@ -162,22 +163,29 @@ fn run_try(
 
             let (_dist, neighbor_point) = other_points_and_distances_to_current_point[i];
             let dir = diff(neighbor_point, current_point);
-            let dir_length = norm(dir);
-            let new_length = 0.3f64 * dir_length;
+            let length_ratio = 0.5f64;
             
             let scaled_dir = (
-                dir.0 as f64 * new_length / dir_length, 
-                dir.1 as f64 * new_length / dir_length);
+                dir.0 as f64 * length_ratio, 
+                dir.1 as f64 * length_ratio);
 
             let perpendicular_dir = (scaled_dir.1, -scaled_dir.0);
 
+            let perpendicular_dir_factor = 0.4;
+
+            let perpendicular_dir_scaled = 
+                (
+                    perpendicular_dir.0 * perpendicular_dir_factor, 
+                    perpendicular_dir.1 * perpendicular_dir_factor
+                );
+
             let grey_value_1_coord_f64 = (
-                scaled_dir.0 + perpendicular_dir.0, 
-                scaled_dir.1 + perpendicular_dir.1);
+                scaled_dir.0 + perpendicular_dir_scaled.0, 
+                scaled_dir.1 + perpendicular_dir_scaled.1);
 
             let grey_value_2_coord_f64 = (
-                scaled_dir.0 - perpendicular_dir.0, 
-                scaled_dir.1 - perpendicular_dir.1);
+                scaled_dir.0 - perpendicular_dir_scaled.0, 
+                scaled_dir.1 - perpendicular_dir_scaled.1);
 
             let grey_value_1_coord = (
                 current_point.0 + grey_value_1_coord_f64.0 as i32, 
@@ -259,7 +267,7 @@ fn run_try(
                             average_distance
                         );
 
-                        discarded_edges.push((current_point, neighbor_point));
+                        discarded_too_long_edges.push((current_point, neighbor_point, ));
                     }
                 }
                 else {
@@ -284,6 +292,9 @@ fn run_try(
                 {
                     remaining_points_to_explore.push(neighbor_point);
                 }
+            } else {
+                discarded_edges_constrast_too_low.push(
+                    (current_point, neighbor_point, grey_value_1_coord, grey_value_2_coord, diff));
             }
 
         }
@@ -293,28 +304,28 @@ fn run_try(
     //let mut rng = rand::thread_rng();
     let nb_connections = connections.len();
     
-    for (index, connection) in connections.iter().enumerate() {
+    // for (index, connection) in connections.iter().enumerate() {
 
-        let h = index as f32 / nb_connections as f32;
-        let s = 0.5f32;
-        let v = 1.0f32;
+    //     let h = index as f32 / nb_connections as f32;
+    //     let s = 0.5f32;
+    //     let v = 1.0f32;
 
-        let hsv = HSV::from_f32(h, s, v);
+    //     let hsv = HSV::from_f32(h, s, v);
 
-        let rgb = hsv.to_rgb();
+    //     let rgb = hsv.to_rgb();
 
-        let r = (rgb.r * 255.0f32) as u8;
-        let g = (rgb.g * 255.0f32) as u8;
-        let b = (rgb.b * 255.0f32) as u8;
+    //     let r = (rgb.r * 255.0f32) as u8;
+    //     let g = (rgb.g * 255.0f32) as u8;
+    //     let b = (rgb.b * 255.0f32) as u8;
 
-        drawing::draw_line_segment_mut(
-            canvas, 
-            (connection.start.0 as f32, connection.start.1 as f32), 
-            (connection.end.0 as f32, connection.end.1 as f32), 
-            Rgb([r, g, b])
-            //Rgb([0, 255, 0])
-        );
-    }
+    //     drawing::draw_line_segment_mut(
+    //         canvas, 
+    //         (connection.start.0 as f32, connection.start.1 as f32), 
+    //         (connection.end.0 as f32, connection.end.1 as f32), 
+    //         Rgb([r, g, b])
+    //         //Rgb([0, 255, 0])
+    //     );
+    // }
 
     // for removed_point in removed_points {
     //     drawing::draw_filled_circle_mut(
@@ -325,7 +336,7 @@ fn run_try(
     //     );
     // }
 
-    // for (index, (start, end)) in discarded_edges.iter().enumerate() {
+    // for (index, (start, end)) in discarded_too_long_edges.iter().enumerate() {
     //     let h = index as f32 / nb_connections as f32;
     //     let s = 0.5f32;
     //     let v = 1.0f32;
@@ -345,6 +356,46 @@ fn run_try(
     //         Rgb([r, g, b])
     //     );
     // }
+
+    for (index, (start, end, pixel1, pixel2, diff)) in discarded_edges_constrast_too_low.iter().enumerate() {
+
+        if 0 <= index && index <= 3 {
+            let h = index as f32 / 6 as f32;
+            let s = 0.5f32;
+            let v = 1.0f32;
+
+            let hsv = HSV::from_f32(h, s, v);
+
+            let rgb = hsv.to_rgb();
+
+            let r = (rgb.r * 255.0f32) as u8;
+            let g = (rgb.g * 255.0f32) as u8;
+            let b = (rgb.b * 255.0f32) as u8;
+
+            drawing::draw_line_segment_mut(
+                canvas, 
+                (start.0 as f32, start.1 as f32), 
+                (end.0 as f32, end.1 as f32), 
+                Rgb([r, g, b])
+            );
+
+            drawing::draw_filled_circle_mut(
+                canvas, 
+                *pixel1,
+                1i32,
+                Rgb([r, g, b])
+            );
+
+            drawing::draw_filled_circle_mut(
+                canvas, 
+                *pixel2,
+                1i32,
+                Rgb([r, g, b])
+            );
+
+            println!("diff is {}", diff);
+        }
+    }
    
     println!("done");
     let out_img = DynamicImage::ImageRgb8(canvas.0.clone());
