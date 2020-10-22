@@ -84,6 +84,7 @@ pub fn run_chessboard_detection(
     }
 }
 
+#[derive(Debug, Clone)]
 struct Connection {
     start: CornerLocation,
     end: CornerLocation,
@@ -104,7 +105,11 @@ fn run_try(
 
     let mut explored_corners = vec!();
 
+    let mut nb_iter = 0;
+
     while remaining_points_to_explore.len() > 0 {
+        println!("remaining_points_to_explore {}", remaining_points_to_explore.len());
+        nb_iter = nb_iter + 1;
         
         let starting_point = remaining_points_to_explore.remove(0);
         explored_corners.push(starting_point);
@@ -122,8 +127,14 @@ fn run_try(
             .collect();
 
 
-        let other_points_and_distances_to_starting_point = 
+        let mut other_points_and_distances_to_starting_point = 
             distance_to_points(starting_point, &other_possibles_corners);
+
+        other_points_and_distances_to_starting_point
+            .sort_by(|a, b|  {
+                a.0.partial_cmp(&b.0).unwrap()
+            }
+        );
 
         let other_corners_count = std::cmp::min(7, other_possibles_corners.len());
 
@@ -187,14 +198,62 @@ fn run_try(
                 
                 let length = distance(a, b);
 
-                connections.push(
-                    Connection {
-                        start: starting_point,
-                        end: point,
-                        angle: angle,
-                        length: length
+
+                // Check if new points is connected 
+                if connections.len() == 0 {
+                    connections.push(
+                        Connection {
+                            start: starting_point,
+                            end: point,
+                            angle: angle,
+                            length: length
+                        }
+                    );
+                } else {
+                    let connections_clone = connections.clone();
+                    
+                    let (count, total_distance) = connections_clone.iter().filter(|connec| {
+                        connec.start == starting_point || connec.start == point ||
+                        connec.end == starting_point || connec.end == point
+                    }).fold((0, 0.0f64), |(count, value), connec| {
+                        (count + 1, value + distance(connec.start, connec.end))
+                    });
+
+                    println!("nb existing neighbor {}", count);
+
+                    if count > 0
+                    {
+                        let average_distance = total_distance / (count as f64);
+
+                        let new_distance = distance(starting_point, point);
+
+                        if average_distance * 0.6f64 <= new_distance && new_distance <= average_distance * 1.4f64 {
+                            connections.push(
+                                Connection {
+                                    start: starting_point,
+                                    end: point,
+                                    angle: angle,
+                                    length: length
+                                }
+                            );
+                        } else {
+                            println!("skipping point because neighbor(s) distance is too big or too small. New distance: {}, neighbor average distance: {}", new_distance, average_distance);
+                        }
                     }
-                );
+                    else {
+                        println!("point has no connection yet.");
+                        connections.push(
+                            Connection {
+                                start: starting_point,
+                                end: point,
+                                angle: angle,
+                                length: length
+                            }
+                        );
+                    }
+
+
+                }
 
                 if explored_corners.iter().find(|ex| equals(**ex, point)).is_none() && 
                     remaining_points_to_explore.iter().find(|r| equals(**r, point)).is_none()
