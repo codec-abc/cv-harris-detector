@@ -140,8 +140,12 @@ fn run_try(
 
         let right_point = (starting_point.0 + width as i32, starting_point.1);
         let a = ((starting_point.0 - right_point.0), (starting_point.1 - right_point.1));
-
+        let mut added_connections = 0;
         for i in 0..other_corners_count {
+            if added_connections >= 4 {
+                println!("Too many connections. stopping here for this point");
+                break;
+            }
             let (_dist, point) = other_points_and_distances_to_starting_point[i];
             let dir = diff(point, starting_point);
             let dir_length = norm(dir);
@@ -198,7 +202,7 @@ fn run_try(
                 
                 let length = distance(a, b);
 
-
+                let mut add_point = true;
                 // Check if new points is connected 
                 if connections.len() == 0 {
                     connections.push(
@@ -209,12 +213,13 @@ fn run_try(
                             length: length
                         }
                     );
+                    added_connections = added_connections + 1;
                 } else {
                     let connections_clone = connections.clone();
                     
                     let (count, total_distance) = connections_clone.iter().filter(|connec| {
-                        connec.start == starting_point || connec.start == point ||
-                        connec.end == starting_point || connec.end == point
+                        connec.start == starting_point  ||  //connec.start == point ||
+                        connec.end == starting_point //|| connec.end == point
                     }).fold((0, 0.0f64), |(count, value), connec| {
                         (count + 1, value + distance(connec.start, connec.end))
                     });
@@ -227,7 +232,11 @@ fn run_try(
 
                         let new_distance = distance(starting_point, point);
 
-                        if average_distance * 0.6f64 <= new_distance && new_distance <= average_distance * 1.4f64 {
+                        let margin = 0.5f64;
+                        let lower_bound = 1.0f64 - margin;
+                        let upper_bound = 1.0f64 + margin;
+
+                        if average_distance * lower_bound <= new_distance && new_distance <= average_distance * upper_bound {
                             connections.push(
                                 Connection {
                                     start: starting_point,
@@ -236,7 +245,9 @@ fn run_try(
                                     length: length
                                 }
                             );
+                            added_connections = added_connections + 1;
                         } else {
+                            add_point = false;
                             println!("skipping point because neighbor(s) distance is too big or too small. New distance: {}, neighbor average distance: {}", new_distance, average_distance);
                         }
                     }
@@ -250,12 +261,13 @@ fn run_try(
                                 length: length
                             }
                         );
+                        added_connections = added_connections + 1;
                     }
 
 
                 }
 
-                if explored_corners.iter().find(|ex| equals(**ex, point)).is_none() && 
+                if add_point && explored_corners.iter().find(|ex| equals(**ex, point)).is_none() && 
                     remaining_points_to_explore.iter().find(|r| equals(**r, point)).is_none()
                 {
                     remaining_points_to_explore.push(point);
