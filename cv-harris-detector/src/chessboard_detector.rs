@@ -109,7 +109,7 @@ fn run_try(
 
     let mut nb_iter = 0;
 
-    let mut removed_points = vec!();
+    let mut discarded_edges = vec!();
 
     while remaining_points_to_explore.len() > 0 {
         // println!("remaining_points_to_explore {}", remaining_points_to_explore.len());
@@ -147,10 +147,19 @@ fn run_try(
         let mut added_connections = 0;
 
         for i in 0..other_corners_count {
-            if added_connections >= 4 {
+        
+            let connections_cloned = connections.clone();
+            let connections_to_current_point : Vec<_> = connections_cloned.iter().filter(|connec| {
+                connec.start == current_point || connec.end == current_point 
+            }).collect();
+
+            println!("nb connetions to current point {}", connections_to_current_point.len());
+
+            if connections_to_current_point.len() >= 4 {
                 println!("Too many connections. stopping here for this point");
                 break;
             }
+
             let (_dist, neighbor_point) = other_points_and_distances_to_current_point[i];
             let dir = diff(neighbor_point, current_point);
             let dir_length = norm(dir);
@@ -196,7 +205,8 @@ fn run_try(
             let diff = grey_value_1 as i16 - grey_value_2 as i16;
 
             // TODO : fix threshold comparison or use sobel edge transform
-            if diff.abs() >= 80 {
+            //if diff.abs() >= 30 {
+            if true {
                 
                 let b = dir;
 
@@ -208,70 +218,26 @@ fn run_try(
                 let length = distance(a, b);
 
                 let mut add_point = true;
-                // Check if new points is connected 
-                if connections.len() == 0 {
-                    connections.push(
-                        Connection {
-                            start: current_point,
-                            end: neighbor_point,
-                            angle: angle,
-                            length: length
-                        }
-                    );
-                    added_connections = added_connections + 1;
-                } else {
-                    let connections_clone = connections.clone();
-                    
-                    let (count, total_distance) = connections_clone.iter().filter(|connec| {
-                        connec.start == current_point  ||  //connec.start == neighbor_point ||
-                        connec.end == current_point //|| connec.end == neighbor_point
-                    }).fold((0, 0.0f64), |(count, value), connec| {
+
+                let (count, total_distance) = connections_to_current_point.iter().fold(
+                    (0, 0.0f64), |(count, value), connec| {
                         (count + 1, value + distance(connec.start, connec.end))
-                    });
-
-                    // println!("nb existing neighbor {}", count);
-
-                    if count > 0
-                    {
-                        let average_distance = total_distance / (count as f64);
-
-                        let new_distance = distance(current_point, neighbor_point);
-
-                        let margin = 0.6f64;
-                        let lower_bound = 1.0f64 - margin;
-                        let upper_bound = 1.0f64 + margin;
-
-                        if average_distance * lower_bound <= new_distance && new_distance <= average_distance * upper_bound {
-                            connections.push(
-                                Connection {
-                                    start: current_point,
-                                    end: neighbor_point,
-                                    angle: angle,
-                                    length: length
-                                }
-                            );
-                            added_connections = added_connections + 1;
-                        } else {
-                            add_point = false;
-
-                            println!(
-                                "skipping point {} {} because neighbor(s) distance is too big or too small. New distance: {}, neighbor average distance: {}", 
-                                current_point.0,
-                                current_point.1,
-                                new_distance, 
-                                average_distance
-                            );
-
-                            if current_point.0 == 241 && current_point.1 == 95 {
-                                println!("nb connections {}", count);
-                            }
-
-                            removed_points.push(current_point);
-                        }
                     }
-                    else {
-                        println!("point has no connection yet.");
+                );
 
+                if count > 0
+                {
+                    let average_distance = total_distance / (count as f64) + 20.0f64;
+
+                    let new_distance = distance(current_point, neighbor_point) + 20.0f64;
+
+                    let margin = 0.5f64;
+                    let lower_bound = (1.0f64 - margin) * average_distance;
+                    let upper_bound = (1.0f64 + margin) * average_distance;
+
+                    if lower_bound <= new_distance && new_distance <= upper_bound {
+
+                        println!("adding edge");
                         connections.push(
                             Connection {
                                 start: current_point,
@@ -280,10 +246,37 @@ fn run_try(
                                 length: length
                             }
                         );
-                        added_connections = added_connections + 1;
-                    }
 
+                        added_connections = added_connections + 1;
+                    } else {
+                        add_point = false;
+
+                        println!(
+                            "skipping point {} {} because neighbor(s) distance is too big or too small. New distance: {}, neighbor average distance: {}", 
+                            current_point.0,
+                            current_point.1,
+                            new_distance, 
+                            average_distance
+                        );
+
+                        discarded_edges.push((current_point, neighbor_point));
+                    }
                 }
+                else {
+                    println!("point has no connection yet.");
+
+                    connections.push(
+                        Connection {
+                            start: current_point,
+                            end: neighbor_point,
+                            angle: angle,
+                            length: length
+                        }
+                    );
+
+                    added_connections = added_connections + 1;
+                }
+                
 
                 if add_point && 
                     //explored_corners.iter().find(|ex| equals(**ex, point)).is_none() && 
@@ -297,14 +290,10 @@ fn run_try(
     }
 
     println!("try done in {} steps", nb_iter);
-    //let mut rng = rand::thread_rng();/
+    //let mut rng = rand::thread_rng();
     let nb_connections = connections.len();
     
     for (index, connection) in connections.iter().enumerate() {
-
-        // let r: u8 = rng.gen();
-        // let g: u8 = rng.gen();
-        // let b: u8 = rng.gen();
 
         let h = index as f32 / nb_connections as f32;
         let s = 0.5f32;
@@ -325,23 +314,37 @@ fn run_try(
             Rgb([r, g, b])
             //Rgb([0, 255, 0])
         );
-
-        // drawing::draw_filled_circle_mut(
-        //     canvas, 
-        //     connection.start,
-        //     1i32,
-        //     Rgb([0, 255, 0])
-        // );
     }
 
-    for removed_point in removed_points {
-        drawing::draw_filled_circle_mut(
-            canvas, 
-            removed_point,
-            1i32,
-            Rgb([0, 255, 0])
-        );
-    }
+    // for removed_point in removed_points {
+    //     drawing::draw_filled_circle_mut(
+    //         canvas, 
+    //         removed_point,
+    //         1i32,
+    //         Rgb([0, 255, 0])
+    //     );
+    // }
+
+    // for (index, (start, end)) in discarded_edges.iter().enumerate() {
+    //     let h = index as f32 / nb_connections as f32;
+    //     let s = 0.5f32;
+    //     let v = 1.0f32;
+
+    //     let hsv = HSV::from_f32(h, s, v);
+
+    //     let rgb = hsv.to_rgb();
+
+    //     let r = (rgb.r * 255.0f32) as u8;
+    //     let g = (rgb.g * 255.0f32) as u8;
+    //     let b = (rgb.b * 255.0f32) as u8;
+
+    //     drawing::draw_line_segment_mut(
+    //         canvas, 
+    //         (start.0 as f32, start.1 as f32), 
+    //         (end.0 as f32, end.1 as f32), 
+    //         Rgb([r, g, b])
+    //     );
+    // }
    
     println!("done");
     let out_img = DynamicImage::ImageRgb8(canvas.0.clone());
