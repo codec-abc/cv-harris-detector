@@ -313,29 +313,33 @@ fn run_try(
     println!("try done in {} steps", nb_iter);
     //let mut rng = rand::thread_rng();
     let nb_connections = connections.len();
+
     
-    // for (index, connection) in connections.iter().enumerate() {
+    let gray_image_rgb = DynamicImage::ImageLuma8(gray_image.clone()).to_rgb();
+    let mut canvas = drawing::Blend(gray_image_rgb);
+    
+    for (index, connection) in connections.iter().enumerate() {
 
-    //     let h = index as f32 / nb_connections as f32;
-    //     let s = 0.5f32;
-    //     let v = 1.0f32;
+        let h = index as f32 / nb_connections as f32;
+        let s = 0.5f32;
+        let v = 1.0f32;
 
-    //     let hsv = HSV::from_f32(h, s, v);
+        let hsv = HSV::from_f32(h, s, v);
 
-    //     let rgb = hsv.to_rgb();
+        let rgb = hsv.to_rgb();
 
-    //     let r = (rgb.r * 255.0f32) as u8;
-    //     let g = (rgb.g * 255.0f32) as u8;
-    //     let b = (rgb.b * 255.0f32) as u8;
+        let r = (rgb.r * 255.0f32) as u8;
+        let g = (rgb.g * 255.0f32) as u8;
+        let b = (rgb.b * 255.0f32) as u8;
 
-    //     drawing::draw_line_segment_mut(
-    //         canvas, 
-    //         (connection.start.0 as f32, connection.start.1 as f32), 
-    //         (connection.end.0 as f32, connection.end.1 as f32), 
-    //         Rgb([r, g, b])
-    //         //Rgb([0, 255, 0])
-    //     );
-    // }
+        drawing::draw_line_segment_mut(
+            &mut canvas, 
+            (connection.start.0 as f32, connection.start.1 as f32), 
+            (connection.end.0 as f32, connection.end.1 as f32), 
+            Rgb([r, g, b])
+            //Rgb([0, 255, 0])
+        );
+    }
 
     // for removed_point in removed_points {
     //     drawing::draw_filled_circle_mut(
@@ -367,48 +371,46 @@ fn run_try(
     //     );
     // }
 
-    let gray_image_rgb = DynamicImage::ImageLuma8(gray_image.clone()).to_rgb();
-    let mut canvas = drawing::Blend(gray_image_rgb);
 
-    for (index, (start, end, pixel1, pixel2, diff)) in discarded_edges_constrast_too_low.iter().enumerate() {
+    // for (index, (start, end, pixel1, pixel2, diff)) in discarded_edges_constrast_too_low.iter().enumerate() {
 
-        if 0 <= index && index <= 12 {
-            let h = index as f32 / 20 as f32;
-            let s = 0.5f32;
-            let v = 1.0f32;
+    //     if 0 <= index && index <= 12 {
+    //         let h = index as f32 / 20 as f32;
+    //         let s = 0.5f32;
+    //         let v = 1.0f32;
 
-            let hsv = HSV::from_f32(h, s, v);
+    //         let hsv = HSV::from_f32(h, s, v);
 
-            let rgb = hsv.to_rgb();
+    //         let rgb = hsv.to_rgb();
 
-            let r = (rgb.r * 255.0f32) as u8;
-            let g = (rgb.g * 255.0f32) as u8;
-            let b = (rgb.b * 255.0f32) as u8;
+    //         let r = (rgb.r * 255.0f32) as u8;
+    //         let g = (rgb.g * 255.0f32) as u8;
+    //         let b = (rgb.b * 255.0f32) as u8;
 
-            drawing::draw_line_segment_mut(
-                &mut canvas, 
-                (start.0 as f32, start.1 as f32), 
-                (end.0 as f32, end.1 as f32), 
-                Rgb([r, g, b])
-            );
+    //         drawing::draw_line_segment_mut(
+    //             &mut canvas, 
+    //             (start.0 as f32, start.1 as f32), 
+    //             (end.0 as f32, end.1 as f32), 
+    //             Rgb([r, g, b])
+    //         );
 
-            drawing::draw_filled_circle_mut(
-                &mut canvas, 
-                *pixel1,
-                1i32,
-                Rgb([r, g, b])
-            );
+    //         drawing::draw_filled_circle_mut(
+    //             &mut canvas, 
+    //             *pixel1,
+    //             1i32,
+    //             Rgb([r, g, b])
+    //         );
 
-            drawing::draw_filled_circle_mut(
-                &mut canvas, 
-                *pixel2,
-                1i32,
-                Rgb([r, g, b])
-            );
+    //         drawing::draw_filled_circle_mut(
+    //             &mut canvas, 
+    //             *pixel2,
+    //             1i32,
+    //             Rgb([r, g, b])
+    //         );
 
-            println!("diff is {}", diff);
-        }
-    }
+    //         println!("diff is {}", diff);
+    //     }
+    // }
    
     println!("done");
     let out_img = DynamicImage::ImageRgb8(canvas.0.clone());
