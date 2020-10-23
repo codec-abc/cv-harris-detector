@@ -4,12 +4,13 @@
 
 use bracket_color::prelude::HSV;
 use image::{DynamicImage, Rgb, Luma, ImageBuffer};
-use imageproc::{drawing};
+use imageproc::{drawing::{self, Blend}};
 //use rand::Rng;
 
 use crate::common::get_pixel_coord;
 
 type CornerLocation = (i32, i32);
+type CornerLocationf64 = (f64, f64);
 
 pub struct CornersMeanAndMedium {
     pub mean: CornerLocation,
@@ -57,8 +58,7 @@ pub fn find_corners_mean_and_medium(
 pub fn run_chessboard_detection(
     possible_corners: &Vec<CornerLocation>,
     corners_centers: &CornersMeanAndMedium,
-    gray_image: &ImageBuffer<Luma<u8>, Vec<u8>>,
-    canvas: &mut drawing::Blend<ImageBuffer<Rgb<u8>, Vec<u8>>>,
+    gray_image: &ImageBuffer<Luma<u8>, Vec<u8>>
 ) {
     
     let current_point_coordinates = corners_centers.mean; // TODO : use mean or medium
@@ -80,8 +80,7 @@ pub fn run_chessboard_detection(
             &mut remaining_points_to_explore,
             &mut connections,
             &possible_corners, 
-            gray_image, 
-            canvas
+            gray_image
         );
     }
 }
@@ -98,8 +97,7 @@ fn run_try(
     remaining_points_to_explore: &mut Vec<CornerLocation>,
     connections: &mut Vec<Connection>,
     corners: &Vec<CornerLocation>,
-    gray_image: &ImageBuffer<Luma<u8>, Vec<u8>>,
-    canvas: &mut drawing::Blend<ImageBuffer<Rgb<u8>, Vec<u8>>>
+    gray_image: &ImageBuffer<Luma<u8>, Vec<u8>>
 ) {
 
     let width = gray_image.width();
@@ -174,10 +172,22 @@ fn run_try(
             let perpendicular_dir_factor = 0.4;
 
             let perpendicular_dir_scaled = 
-                (
-                    perpendicular_dir.0 * perpendicular_dir_factor, 
-                    perpendicular_dir.1 * perpendicular_dir_factor
-                );
+            (
+                perpendicular_dir.0 * perpendicular_dir_factor, 
+                perpendicular_dir.1 * perpendicular_dir_factor
+            );
+
+            let perpendicular_dir_unit_scale =
+            (
+                perpendicular_dir_scaled.0 / norm_f64(perpendicular_dir_scaled),
+                perpendicular_dir_scaled.1 / norm_f64(perpendicular_dir_scaled),
+            );
+
+            let perpendicular_dir_scaled = 
+            (
+                perpendicular_dir_scaled.0 + perpendicular_dir_unit_scale.0, 
+                perpendicular_dir_scaled.1 + perpendicular_dir_unit_scale.1, 
+            );
 
             let grey_value_1_coord_f64 = (
                 scaled_dir.0 + perpendicular_dir_scaled.0, 
@@ -357,10 +367,13 @@ fn run_try(
     //     );
     // }
 
+    let gray_image_rgb = DynamicImage::ImageLuma8(gray_image.clone()).to_rgb();
+    let mut canvas = drawing::Blend(gray_image_rgb);
+
     for (index, (start, end, pixel1, pixel2, diff)) in discarded_edges_constrast_too_low.iter().enumerate() {
 
-        if 0 <= index && index <= 3 {
-            let h = index as f32 / 6 as f32;
+        if 0 <= index && index <= 12 {
+            let h = index as f32 / 20 as f32;
             let s = 0.5f32;
             let v = 1.0f32;
 
@@ -373,21 +386,21 @@ fn run_try(
             let b = (rgb.b * 255.0f32) as u8;
 
             drawing::draw_line_segment_mut(
-                canvas, 
+                &mut canvas, 
                 (start.0 as f32, start.1 as f32), 
                 (end.0 as f32, end.1 as f32), 
                 Rgb([r, g, b])
             );
 
             drawing::draw_filled_circle_mut(
-                canvas, 
+                &mut canvas, 
                 *pixel1,
                 1i32,
                 Rgb([r, g, b])
             );
 
             drawing::draw_filled_circle_mut(
-                canvas, 
+                &mut canvas, 
                 *pixel2,
                 1i32,
                 Rgb([r, g, b])
@@ -434,6 +447,10 @@ fn diff((a_x, a_y) : CornerLocation, (b_x, b_y) : CornerLocation) -> CornerLocat
 
 fn norm((a_x, a_y) : CornerLocation) -> f64 {
     ((a_x as f64).powi(2) + (a_y as f64).powi(2)).sqrt()
+}
+
+fn norm_f64((a_x, a_y) : CornerLocationf64) -> f64 {
+    (a_x.powi(2) + a_y.powi(2)).sqrt()
 }
 
 fn equals((a_x, a_y) : CornerLocation, (b_x, b_y) : CornerLocation) -> bool {

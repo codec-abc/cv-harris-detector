@@ -1,5 +1,5 @@
-use image::{DynamicImage};
-use imageproc::{drawing, filter};
+use image::{DynamicImage, ImageBuffer, Rgb};
+use imageproc::{drawing::{self, Blend}, filter};
 
 use cv_harris_detector::*;
 
@@ -72,7 +72,7 @@ pub fn main_harris() {
     
     let non_maximum_suppression_radius = 5.0f64;
     let window_size_ratio = 0.5f64;// TODO : should be 0.8;
-    let run_histogram_normalization = false;
+    let run_histogram_normalization = true;
     let k: f64 = 0.04f64; // Harris detector free parameter. The higher the value the less it detects.
 
     let gray_image = src_image.to_luma();
@@ -82,7 +82,9 @@ pub fn main_harris() {
     // TODO : do local normalization instead of the whole image to cope with contrast differences
     let gray_image = if run_histogram_normalization {
         let old_gray_image = gray_image;
-        imageproc::contrast::equalize_histogram(&old_gray_image)
+        //imageproc::contrast::equalize_histogram(&old_gray_image)
+        let otsu_level = imageproc::contrast::otsu_level(&old_gray_image);
+        imageproc::contrast::threshold(&old_gray_image, otsu_level)
     } else {
         gray_image
     };
@@ -93,12 +95,6 @@ pub fn main_harris() {
         harris_result.run_non_maximum_suppression(non_maximum_suppression_radius, harris_threshold);
 
     let harris_image = DynamicImage::ImageLuma8(harris_normed_non_max_suppressed.clone()).to_rgb();
-
-    let mut canvas = if display_over_original_image {
-        drawing::Blend(DynamicImage::ImageLuma8(gray_image.clone()).to_rgb())
-    } else {
-        drawing::Blend(harris_image)
-    };
 
     let corners = get_harris_corners_based_on_threshold(&harris_normed_non_max_suppressed, harris_threshold);
 
@@ -140,10 +136,9 @@ pub fn main_harris() {
     run_chessboard_detection(
         &filtering_result.remaining_corners, 
         &corners_centers,
-        &blurred_gray_image,
-        &mut canvas
+        &blurred_gray_image
     );
-
+    
 }
 
 
