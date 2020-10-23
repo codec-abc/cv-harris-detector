@@ -80,14 +80,14 @@ pub fn main_harris() {
     let blurred_gray_image = filter::gaussian_blur_f32(&gray_image, 2.0f32);
 
     // TODO : do local normalization instead of the whole image to cope with contrast differences
-    let gray_image = if run_histogram_normalization {
-        let old_gray_image = gray_image;
-        //imageproc::contrast::equalize_histogram(&old_gray_image)
-        let otsu_level = imageproc::contrast::otsu_level(&old_gray_image);
-        imageproc::contrast::threshold(&old_gray_image, otsu_level)
-    } else {
-        gray_image
-    };
+    // let gray_image = if run_histogram_normalization {
+    //     let old_gray_image = gray_image;
+    //     //imageproc::contrast::equalize_histogram(&old_gray_image)
+    //     let otsu_level = imageproc::contrast::otsu_level(&old_gray_image);
+    //     imageproc::contrast::threshold(&old_gray_image, otsu_level)
+    // } else {
+    //     gray_image
+    // };
 
     let harris_result = cv_harris_detector::harris_corner(&gray_image, k);
 
@@ -136,9 +136,9 @@ pub fn main_harris() {
     run_chessboard_detection(
         &filtering_result.remaining_corners, 
         &corners_centers,
-        &blurred_gray_image
+        &gray_image
     );
-    
+
 }
 
 
