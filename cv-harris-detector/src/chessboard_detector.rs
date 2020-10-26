@@ -311,10 +311,15 @@ fn run_try(
     }
 
     println!("try done in {} steps", nb_iter);
+    draw_chessboard_debug(&connections, &gray_image);
+}
+
+
+fn draw_chessboard_debug(connections: &Vec<Connection>, gray_image: &ImageBuffer<Luma<u8>, Vec<u8>>) {
     //let mut rng = rand::thread_rng();
     let nb_connections = connections.len();
 
-    
+
     let gray_image_rgb = DynamicImage::ImageLuma8(gray_image.clone()).to_rgb();
     let mut canvas = drawing::Blend(gray_image_rgb);
     
@@ -411,7 +416,7 @@ fn run_try(
     //         println!("diff is {}", diff);
     //     }
     // }
-   
+    
     println!("done");
     let out_img = DynamicImage::ImageRgb8(canvas.0.clone());
     imgshow::imgshow(&out_img);
