@@ -10,6 +10,7 @@ use imageproc::{drawing::{self, Blend}};
 use crate::common::get_pixel_coord;
 
 type CornerLocation = (i32, i32);
+type Vector2D = (i32, i32);
 type CornerLocationf64 = (f64, f64);
 
 pub struct CornersMeanAndMedium {
@@ -101,7 +102,7 @@ fn run_try(
 ) {
 
     let width = gray_image.width();
-    let height = gray_image.height();
+    //let height = gray_image.height();
 
     let mut explored_corners = vec!();
 
@@ -142,15 +143,19 @@ fn run_try(
         let other_corners_count = std::cmp::min(7, other_possibles_corners.len());
 
         let right_point = (current_point.0 + width as i32, current_point.1);
-        let a = ((current_point.0 - right_point.0), (current_point.1 - right_point.1));
+        let base_angle_vector = ((current_point.0 - right_point.0), (current_point.1 - right_point.1));
         let mut added_connections = 0;
 
         for i in 0..other_corners_count {
         
             let connections_cloned = connections.clone();
-            let connections_to_current_point : Vec<&Connection> = connections_cloned.iter().filter(|connec| {
-                connec.start == current_point || connec.end == current_point 
-            }).collect();
+
+            let connections_to_current_point : Vec<&Connection> = 
+                connections_cloned.iter().filter(|connec| {
+                    connec.start == current_point || 
+                    connec.end == current_point 
+                }
+            ).collect();
 
             println!("nb connetions to current point {}", connections_to_current_point.len());
 
@@ -169,18 +174,29 @@ fn run_try(
 
             // TODO : fix threshold comparison or use sobel edge transform
             if diff.abs() >= 100 {
-                
-                handle_big_diff_between_edge_side(
-                    dir, 
-                    a, 
-                    &mut added_connections,
+
+                let edge = Edge {
+                    dir,
+                    base_angle_vector,
                     current_point,
-                    neighbor_point,
-                    connections,
+                    neighbor_point
+                };
+                
+                let connection = get_connection_if_edge_is_valid(
+                    &edge,
                     &connections_to_current_point,
-                    remaining_points_to_explore,
                     &mut &mut discarded_too_long_edges,
                 );
+
+                if connection.is_some() {
+                    added_connections = added_connections + 1;
+                    connections.push(connection.unwrap());
+                    
+                    if remaining_points_to_explore.iter().find(|r| equals(**r, neighbor_point)).is_none()
+                    {
+                        remaining_points_to_explore.push(neighbor_point);
+                    }
+                }
                 
             } else {
                 discarded_edges_constrast_too_low.push(
@@ -199,29 +215,24 @@ fn run_try(
     draw_chessboard_debug(&connections, &gray_image);
 }
 
+struct Edge {
+    dir: CornerLocation,
+    base_angle_vector: CornerLocation,
+    current_point: CornerLocation,
+    neighbor_point: CornerLocation,
+}
 
-fn handle_big_diff_between_edge_side(
-    dir: (i32, i32),
-    a: (i32, i32),
-    added_connections: &mut i32,
-    current_point: (i32, i32),
-    neighbor_point: (i32, i32),
-    connections: &mut Vec<Connection>,
+
+fn get_connection_if_edge_is_valid(
+    edge: &Edge,
     connections_to_current_point: &Vec<&Connection>,
-    remaining_points_to_explore: &mut Vec<CornerLocation>,
-    discarded_too_long_edges: &mut Vec<((i32, i32), (i32, i32))>,
+    discarded_too_long_edges: &mut Vec<(CornerLocation, CornerLocation)>,
+) -> Option<Connection> {
+    let b = edge.dir;
+    let a = edge.base_angle_vector;
 
-) {
-    let b = dir;
-
-    let angle = 
-        (a.0 as f64 * b.1 as f64 - a.1 as f64 * b.0 as f64 )
-        .atan2(a.0 as f64 * b.0 as f64 + a.1 as f64 * b.1 as f64)
-        .to_degrees();
-    
+    let angle = angle(a, b);
     let length = distance(a, b);
-
-    let mut add_point = true;
 
     let (count, total_distance) = connections_to_current_point.iter().fold(
         (0, 0.0f64), |(count, value), connec| {
@@ -229,13 +240,15 @@ fn handle_big_diff_between_edge_side(
         }
     );
 
+    let result: Option<Connection>;
+
     if count > 0
     {
         let bound_margin = 0.5f64;
         let absolute_margin = 20.0f64;
 
         let average_distance = total_distance / (count as f64) + absolute_margin;
-        let new_distance = distance(current_point, neighbor_point) + absolute_margin;
+        let new_distance = distance(edge.current_point, edge.neighbor_point) + absolute_margin;
 
         let lower_bound = (1.0f64 - bound_margin) * average_distance;
         let upper_bound = (1.0f64 + bound_margin) * average_distance;
@@ -243,63 +256,50 @@ fn handle_big_diff_between_edge_side(
         if lower_bound <= new_distance && new_distance <= upper_bound {
 
             println!("adding edge");
-            connections.push(
-                Connection {
-                    start: current_point,
-                    end: neighbor_point,
-                    angle: angle,
-                    length: length
-                }
-            );
 
-            *added_connections = *added_connections + 1;
+            result = Some(Connection {
+                start: edge.current_point,
+                end: edge.neighbor_point,
+                angle: angle,
+                length: length
+            });
+
         } else {
-            add_point = false;
 
             println!(
                 "skipping point {} {} because neighbor(s) distance is too big or too small. New distance: {}, neighbor average distance: {}", 
-                current_point.0,
-                current_point.1,
+                edge.current_point.0,
+                edge.current_point.1,
                 new_distance, 
                 average_distance
             );
 
-            discarded_too_long_edges.push((current_point, neighbor_point));
+            discarded_too_long_edges.push((edge.current_point, edge.neighbor_point));
+            result = None;
         }
     }
     else {
         println!("point has no connection yet.");
 
-        connections.push(
-            Connection {
-                start: current_point,
-                end: neighbor_point,
-                angle: angle,
-                length: length
-            }
-        );
-
-        *added_connections = *added_connections + 1;
-    }
-    
-
-    if add_point && 
-        //explored_corners.iter().find(|ex| equals(**ex, point)).is_none() && 
-        remaining_points_to_explore.iter().find(|r| equals(**r, neighbor_point)).is_none()
-    {
-        remaining_points_to_explore.push(neighbor_point);
-    }
+        result = Some(Connection {
+            start: edge.current_point,
+            end: edge.neighbor_point,
+            angle: angle,
+            length: length
+        });
+    }    
+    result
 }
 
 struct Difference {
     diff: i16,
-    dir: (i32, i32),
+    dir: Vector2D,
 }
 
 fn get_difference(
     gray_image: &ImageBuffer<Luma<u8>, Vec<u8>>,
-    current_point: (i32, i32),
-    neighbor_point: (i32, i32),
+    current_point: Vector2D,
+    neighbor_point: Vector2D,
 ) -> Difference {
 
     let width = gray_image.width();
@@ -377,10 +377,12 @@ fn get_difference(
 }
 
 
-fn draw_chessboard_debug(connections: &Vec<Connection>, gray_image: &ImageBuffer<Luma<u8>, Vec<u8>>) {
+fn draw_chessboard_debug(
+    connections: &Vec<Connection>, 
+    gray_image: &ImageBuffer<Luma<u8>, Vec<u8>>
+) {
     //let mut rng = rand::thread_rng();
     let nb_connections = connections.len();
-
 
     let gray_image_rgb = DynamicImage::ImageLuma8(gray_image.clone()).to_rgb();
     let mut canvas = drawing::Blend(gray_image_rgb);
@@ -524,4 +526,14 @@ fn norm_f64((a_x, a_y) : CornerLocationf64) -> f64 {
 
 fn equals((a_x, a_y) : CornerLocation, (b_x, b_y) : CornerLocation) -> bool {
     a_x == b_x && a_y == b_y
+}
+
+fn angle(a : CornerLocation, b : CornerLocation) -> f64 {
+
+    let angle = 
+        (a.0 as f64 * b.1 as f64 - a.1 as f64 * b.0 as f64 )
+        .atan2(a.0 as f64 * b.0 as f64 + a.1 as f64 * b.1 as f64)
+        .to_degrees();
+
+    angle
 }
