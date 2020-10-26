@@ -159,68 +159,13 @@ fn run_try(
                 break;
             }
 
-            let (_dist, neighbor_point) = other_points_and_distances_to_current_point[i];
-            let dir = diff(neighbor_point, current_point);
-            let length_ratio = 0.5f64;
-            
-            let scaled_dir = (
-                dir.0 as f64 * length_ratio, 
-                dir.1 as f64 * length_ratio);
+            let (_distance_to_neightbor, neighbor_point) = 
+                other_points_and_distances_to_current_point[i];
+                
+            let difference = get_difference(gray_image, current_point, neighbor_point);
 
-            let perpendicular_dir = (scaled_dir.1, -scaled_dir.0);
-
-            let perpendicular_dir_factor = 0.4;
-
-            let perpendicular_dir_scaled = 
-            (
-                perpendicular_dir.0 * perpendicular_dir_factor, 
-                perpendicular_dir.1 * perpendicular_dir_factor
-            );
-
-            let perpendicular_dir_unit_scale =
-            (
-                perpendicular_dir_scaled.0 / norm_f64(perpendicular_dir_scaled),
-                perpendicular_dir_scaled.1 / norm_f64(perpendicular_dir_scaled),
-            );
-
-            let perpendicular_dir_scaled = 
-            (
-                perpendicular_dir_scaled.0 + perpendicular_dir_unit_scale.0, 
-                perpendicular_dir_scaled.1 + perpendicular_dir_unit_scale.1, 
-            );
-
-            let grey_value_1_coord_f64 = (
-                scaled_dir.0 + perpendicular_dir_scaled.0, 
-                scaled_dir.1 + perpendicular_dir_scaled.1);
-
-            let grey_value_2_coord_f64 = (
-                scaled_dir.0 - perpendicular_dir_scaled.0, 
-                scaled_dir.1 - perpendicular_dir_scaled.1);
-
-            let grey_value_1_coord = (
-                current_point.0 + grey_value_1_coord_f64.0 as i32, 
-                current_point.1 + grey_value_1_coord_f64.1 as i32);
-
-            let grey_value_2_coord = (
-                current_point.0 + grey_value_2_coord_f64.0 as i32, 
-                current_point.1 + grey_value_2_coord_f64.1 as i32);
-
-            // TODO : check coordinates are on screen
-            let grey_value_1 = gray_image[
-                get_pixel_coord(
-                    (grey_value_1_coord.0 as i32, grey_value_1_coord.1 as i32), 
-                    width, 
-                    height
-                )][0];
-
-            let grey_value_2 = gray_image[
-                get_pixel_coord(
-                    (grey_value_2_coord.0 as i32, grey_value_2_coord.1 as i32), 
-                    width, 
-                    height
-                )][0];
-
-            let diff = grey_value_1 as i16 - grey_value_2 as i16;
+            let diff = difference.diff;
+            let dir = difference.dir;
 
             // TODO : fix threshold comparison or use sobel edge transform
             if diff.abs() >= 100 {
@@ -304,7 +249,11 @@ fn run_try(
                 }
             } else {
                 discarded_edges_constrast_too_low.push(
-                    (current_point, neighbor_point, grey_value_1_coord, grey_value_2_coord, diff));
+                    (
+                        current_point, 
+                        neighbor_point, 
+                        diff
+                    ));
             }
 
         }
@@ -312,6 +261,91 @@ fn run_try(
 
     println!("try done in {} steps", nb_iter);
     draw_chessboard_debug(&connections, &gray_image);
+}
+
+struct Difference {
+    diff: i16,
+    dir: (i32, i32),
+}
+
+fn get_difference(
+    gray_image: &ImageBuffer<Luma<u8>, Vec<u8>>,
+    current_point: (i32, i32),
+    neighbor_point: (i32, i32),
+) -> Difference {
+
+    let width = gray_image.width();
+    let height = gray_image.height();
+
+    //let (_dist, neighbor_point) = other_points_and_distances_to_current_point[i];
+    let dir = diff(neighbor_point, current_point);
+    let length_ratio = 0.5f64;
+    
+    let scaled_dir = (
+        dir.0 as f64 * length_ratio, 
+        dir.1 as f64 * length_ratio);
+
+    let perpendicular_dir = (scaled_dir.1, -scaled_dir.0);
+
+    let perpendicular_dir_factor = 0.4;
+
+    let perpendicular_dir_scaled = 
+    (
+        perpendicular_dir.0 * perpendicular_dir_factor, 
+        perpendicular_dir.1 * perpendicular_dir_factor
+    );
+
+    let perpendicular_dir_unit_scale =
+    (
+        perpendicular_dir_scaled.0 / norm_f64(perpendicular_dir_scaled),
+        perpendicular_dir_scaled.1 / norm_f64(perpendicular_dir_scaled),
+    );
+
+    let perpendicular_dir_scaled = 
+    (
+        perpendicular_dir_scaled.0 + perpendicular_dir_unit_scale.0, 
+        perpendicular_dir_scaled.1 + perpendicular_dir_unit_scale.1, 
+    );
+
+    let grey_value_1_coord_f64 = (
+        scaled_dir.0 + perpendicular_dir_scaled.0, 
+        scaled_dir.1 + perpendicular_dir_scaled.1);
+
+    let grey_value_2_coord_f64 = (
+        scaled_dir.0 - perpendicular_dir_scaled.0, 
+        scaled_dir.1 - perpendicular_dir_scaled.1);
+
+    let grey_value_1_coord = (
+        current_point.0 + grey_value_1_coord_f64.0 as i32, 
+        current_point.1 + grey_value_1_coord_f64.1 as i32);
+
+    let grey_value_2_coord = (
+        current_point.0 + grey_value_2_coord_f64.0 as i32, 
+        current_point.1 + grey_value_2_coord_f64.1 as i32);
+
+    // TODO : check coordinates are on screen
+    let grey_value_1 = gray_image[
+        get_pixel_coord(
+            (grey_value_1_coord.0 as i32, grey_value_1_coord.1 as i32), 
+            width, 
+            height
+        )][0];
+
+    let grey_value_2 = gray_image[
+        get_pixel_coord(
+            (grey_value_2_coord.0 as i32, grey_value_2_coord.1 as i32), 
+            width, 
+            height
+        )][0];
+
+    let diff = grey_value_1 as i16 - grey_value_2 as i16;
+    
+    let result = Difference {
+        dir,
+        diff
+    };
+
+    result
 }
 
 
